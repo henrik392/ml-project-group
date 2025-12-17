@@ -1,7 +1,7 @@
 # YOLO Dataset Config - Fold 1
 # Train: video_0, video_2 | Val: video_1
 
-path: ../data/folds/fold_1  # dataset root dir
+path: /Users/henrikkvamme/development/uni/tsinghua/ml/ml-project-group/data/folds/fold_1  # dataset root dir
 train: train/images  # train images (relative to 'path')
 val: val/images  # val images (relative to 'path')
 
