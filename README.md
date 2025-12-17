@@ -1,49 +1,67 @@
-# ML Project Group - TensorFlow Great Barrier Reef
+# Great Barrier Reef COTS Detection
 
-Object detection project using the TensorFlow Great Barrier Reef competition dataset.
+YOLOv11-based Crown-of-Thorns Starfish detection for the Kaggle TensorFlow Great Barrier Reef competition.
 
 ## Setup
 
-### Prerequisites
-
-- Python >= 3.14
-- Kaggle API credentials (for dataset download)
-
-### Installation
-
-1. Install dependencies:
 ```bash
+# Install dependencies
 uv sync
+
+# Configure Kaggle API (for data download and submissions)
+# Place kaggle.json in ~/.kaggle/
 ```
 
-2. Download the dataset:
+## Usage
 
-**Option A: Using Kaggle CLI (recommended)**
+```bash
+# Train
+python src/training/train.py
+
+# Evaluate
+python src/evaluation/f2_score.py
+
+# Predict
+python src/inference/predict.py
+
+# Submit to Kaggle
+kaggle competitions submit -c tensorflow-great-barrier-reef -f submission.csv -m "Description"
+```
+
+## Data
+
+Download from Kaggle and place in `data/` directory:
 ```bash
 kaggle competitions download -c tensorflow-great-barrier-reef
 unzip tensorflow-great-barrier-reef.zip -d data/
 ```
 
-**Option B: Manual download**
-- Download the dataset from [Kaggle](https://www.kaggle.com/competitions/tensorflow-great-barrier-reef)
-- Place the zip file in the project root
-- Extract to `data/` folder:
-```bash
-unzip tensorflow-great-barrier-reef.zip -d data/
+## Project Structure
+
+```
+├── CLAUDE.md          # Development guidelines
+├── configs/           # YOLO dataset and training configs
+├── src/              # Source code
+│   ├── data/         # Data preparation
+│   ├── training/     # Training scripts
+│   ├── evaluation/   # F2 score evaluation
+│   ├── postprocessing/ # Temporal post-processing
+│   └── inference/    # Prediction pipeline
+├── reports/          # Score charts and documentation
+└── analysis/         # Data analysis reports
 ```
 
-### Dataset Structure
+## Approach
 
-After extraction, the `data/` directory contains:
-- `train_images/` - Training video frames organized by video ID
-- `train.csv` - Training annotations
-- `test.csv` - Test set metadata
-- `example_sample_submission.csv` - Sample submission format
-- `greatbarrierreef/` - Competition utilities
+Based on the 1st place Kaggle solution with modern improvements:
+- **YOLOv11** for object detection
+- **SAHI** for small object detection (slice-based inference)
+- **3-fold CV** by video_id (leave-one-video-out)
+- **Temporal post-processing** (attention area boosting)
+- **Underwater augmentations** (MotionBlur, RGBShift, CLAHE)
 
-## Development
+## Competition
 
-Run the main script:
-```bash
-uv run python main.py
-```
+- **Task:** Detect Crown-of-Thorns Starfish (COTS) in underwater video
+- **Metric:** F2 Score (emphasizes recall over precision)
+- **Data:** 23,501 training frames from 3 videos
