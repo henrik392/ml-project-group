@@ -10,6 +10,10 @@ wheels/
 .venv
 
 # Dataset files
-data/
+/data/
 *.zip
 .ruff_cache/
+
+# Model weights and outputs
+/models/
+/runs/
