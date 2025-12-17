@@ -1,0 +1,11 @@
+# YOLO Dataset Config - Fold 2
+# Train: video_0, video_1 | Val: video_2
+
+path: ../data/folds/fold_2  # dataset root dir
+train: train/images  # train images (relative to 'path')
+val: val/images  # val images (relative to 'path')
+
+# Classes
+nc: 1  # number of classes
+names:
+  0: starfish  # Crown-of-Thorns Starfish (COTS)
