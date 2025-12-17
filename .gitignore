@@ -12,3 +12,4 @@ wheels/
 # Dataset files
 data/
 *.zip
+.ruff_cache/
