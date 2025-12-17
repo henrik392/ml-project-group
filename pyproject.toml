@@ -4,7 +4,21 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "albumentations>=2.0.8",
+    "kaggle>=1.8.2",
+    "matplotlib>=3.10.8",
+    "numpy>=2.3.5",
+    "opencv-python-headless>=4.11.0.86",
+    "pandas>=2.3.3",
+    "pillow>=12.0.0",
+    "sahi>=0.11.36",
+    "seaborn>=0.13.2",
+    "supervision>=0.27.0",
+    "torch>=2.9.1",
+    "tqdm>=4.67.1",
+    "ultralytics>=8.3.239",
+]
 
 [dependency-groups]
 dev = [
