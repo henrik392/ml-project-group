@@ -1,0 +1,11 @@
+Metric,Baseline (Epoch 10),Phase 2 (Epoch 15),Change (%)
+mAP50,0.154,0.082,-46.8
+mAP50-95,0.078,0.04,-48.7
+Precision,0.62,0.499,-19.5
+Recall,0.091,0.052,-42.9
+Box Loss (train),1.756,1.03,-41.3
+Cls Loss (train),1.802,0.929,-48.4
+DFL Loss (train),1.005,0.95,-5.5
+Box Loss (val),1.99,1.305,-34.4
+Cls Loss (val),3.777,5.139,36.0
+DFL Loss (val),1.023,1.057,3.3
