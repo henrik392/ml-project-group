@@ -56,21 +56,45 @@ Building a winning-level YOLOv11 pipeline adapted from the 1st place Kaggle solu
 
 ---
 
-### ⏳ Phase 2: Optimized Detection
+### ⚠️ Phase 2: Optimized Detection (Needs Revision)
+**Branch:** `feature/phase-2-optimized-detection`
 **Target CV F2:** > 0.65
-**Status:** Not Started
+**Status:** ⚠️ Attempted - Performance Degraded (Needs Revision)
 
-**Planned Tasks:**
-- Model scaling (YOLOv11s, YOLOv11m)
-- Higher resolution training (1280×720)
-- Hyperparameter optimization (box=0.2, iou_t=0.3)
-- Underwater augmentations (MotionBlur, RGBShift, CLAHE)
-- SAHI integration for small objects
+**What Was Attempted:**
+- [x] Created optimized training script
+- [x] Tested hyperparameter changes (box: 7.5→5.0)
+- [x] Disabled HSV augmentation (per winning solution)
+- [x] 15-epoch training run on Fold 0
+- [x] Comprehensive analysis and documentation
 
-**Expected Deliverables:**
-- `src/training/train_optimized.py`
-- `configs/yolo_optimized.yaml`
-- CV F2 > 0.65
+**Results (15 epochs, Fold 0):**
+- mAP50: 0.082 (-47% vs baseline) ⚠️
+- mAP50-95: 0.040 (-49% vs baseline) ⚠️
+- Precision: 0.499 (-19% vs baseline) ⚠️
+- Recall: 0.052 (-43% vs baseline) ⚠️
+- **Conclusion**: Worse than baseline
+
+**Issues Encountered:**
+1. MPS backend incompatibility with rotation+mosaic (TAL errors)
+2. Removing HSV augmentation hurt generalization
+3. Memory issues (OOM crash at epoch 15)
+4. Training instability (40x slower after epoch 5)
+
+**Deliverables:**
+- `src/training/train_optimized.py` ✅
+- `reports/phase2_analysis.md` ✅
+- `reports/final_report/figures/` ✅ (5 visualizations)
+- `src/visualization/generate_report_figures.py` ✅
+
+**Phase 2 Revision (In Progress):**
+- ✅ Chose Option C: Incremental testing on MPS
+- ✅ Created `src/training/train_phase2_revised.py`
+- ✅ Created `reports/phase2_revision_strategy.md`
+- 🔄 **Testing**: Conservative changes (HSV enabled, box: 7.5→6.5, 20 epochs)
+- ⏳ Run training: `python src/training/train_phase2_revised.py --fold 0 --epochs 20`
+
+**Strategy**: Keep what worked (HSV augmentation), make small changes, validate incrementally
 
 ---
 
@@ -124,25 +148,31 @@ Building a winning-level YOLOv11 pipeline adapted from the 1st place Kaggle solu
 
 ## Scores Tracker
 
-| Phase | Model | Image Size | Epochs | mAP50 | mAP50-95 | Precision | Recall | Date |
-|-------|-------|------------|--------|-------|----------|-----------|--------|------|
-| 1 (baseline test) | YOLOv11n | 640 | 10 | 0.154 | 0.078 | 0.620 | 0.091 | 2025-12-17 |
+| Phase | Model | Image Size | Epochs | mAP50 | mAP50-95 | Precision | Recall | Status | Date |
+|-------|-------|------------|--------|-------|----------|-----------|--------|--------|------|
+| 1 (baseline) | YOLOv11n | 640 | 10 | **0.154** | **0.078** | **0.620** | **0.091** | ✅ Best | 2025-12-17 |
+| 2 (optimized) | YOLOv11n | 640 | 15 | 0.082 | 0.040 | 0.499 | 0.052 | ⚠️ Worse | 2025-12-19 |
 
-**Note:** Phase 1 was a 10-epoch test run on Fold 0 only to validate the training pipeline. Full 3-fold CV training pending Phase 2.
+**Key Findings:**
+- ✅ **Baseline remains best performer** (Phase 1)
+- ⚠️ Phase 2 degraded performance due to removed HSV augmentation
+- 📊 Both trained on Fold 0 only (video_1+2 train, video_0 val)
+- 🎯 **Current best: Phase 1 baseline** (use for Phase 3+)
 
 ---
 
 ## Key Techniques (from 1st Place Solution)
 
-| Technique | Status | Phase | Impact |
-|-----------|--------|-------|--------|
-| 3-fold CV by video_id | ✅ Implemented | 1 | Foundation |
-| YOLO format conversion | ✅ Implemented | 1 | Required |
-| Modified hyperparams (box=0.2, iou_t=0.3) | ⏳ Planned | 2 | +5-10% |
-| Underwater augmentations | ⏳ Planned | 2 | +3-5% |
-| SAHI for small objects | ⏳ Planned | 2 | +5-8% |
-| Temporal boosting | ⏳ Planned | 3 | +2-4% |
-| Classification re-scoring | ⏳ Optional | 5 | +2-4% |
+| Technique | Status | Phase | Impact | Notes |
+|-----------|--------|-------|--------|-------|
+| 3-fold CV by video_id | ✅ Implemented | 1 | Foundation | Working |
+| YOLO format conversion | ✅ Implemented | 1 | Required | 23,501 images |
+| HSV augmentation | ✅ Critical | 1 | **Important** | Removing it hurt performance! |
+| Modified hyperparams (box=0.2) | ⚠️ Failed | 2 | TBD | MPS compatibility issues |
+| Rotation/Mixup augmentation | ⚠️ Blocked | 2 | TBD | Causes TAL errors on MPS |
+| SAHI for small objects | ⏳ Planned | 2-rev | +5-8% | Next priority |
+| Temporal boosting | ⏳ Planned | 3 | +2-4% | - |
+| Classification re-scoring | ⏳ Optional | 5 | +2-4% | If needed |
 
 ---
 
