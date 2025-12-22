@@ -7,6 +7,7 @@
 - Evaluation: 3-fold cross-validation by video_id
 
 ## Development Guidelines
+- **ALWAYS use `uv run` to execute Python scripts** (not `python3` or `python` directly)
 - Use YOLOv11 via ultralytics library
 - Train with `device='mps'` on M4 Max (or cloud GPUs if MPS has compatibility issues)
 - Always validate with 3-fold video-based CV (leave-one-video-out)
@@ -117,13 +118,19 @@ reports/
 ## Commands
 ```bash
 # Train
-python src/training/train.py
+uv run src/training/train.py
 
 # Evaluate
-python src/evaluation/f2_score.py
+uv run src/evaluation/f2_score.py
 
 # Predict
-python src/inference/predict.py
+uv run src/inference/predict.py
+
+# Ablation study
+uv run src/training/ablation_study.py --fold 0 --epochs 5 --device mps
+
+# Compare ablation results
+uv run src/evaluation/compare_ablation.py --fold 0
 
 # Submit to Kaggle
 kaggle competitions submit -c tensorflow-great-barrier-reef -f submission.csv -m "Phase X submission"

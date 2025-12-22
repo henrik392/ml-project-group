@@ -18,3 +18,4 @@ wheels/
 /models/
 /runs/
 *.pt
+*.log
