@@ -87,24 +87,40 @@ no_hsv:
 
 **Implication**: The winning solution's box=0.2 may work with larger models or more augmentation, but NOT for our nano model + limited augmentation.
 
-### 3. Rotation Augmentation Hurts (rotation_10: -12.7%)
+### 3. Rotation Augmentation Hurts Performance (rotation_10: -12.7%)
 
 **Finding**: Adding 10° rotation decreased mAP50 by 12.7%.
 
-**Possible explanations**:
-1. **MPS backend issues**: Rotation may trigger instability on M4 Max
-2. **Starfish orientation**: COTS may have consistent orientation in video frames
-3. **Training instability**: Rotation + mosaic combination problematic
-4. **Insufficient epochs**: 5 epochs not enough to benefit from rotation
+**Important clarification**: Rotation WORKS on MPS (no crashes, no errors). The performance degradation is a modeling issue, not a technical compatibility issue.
+
+**Evidence that rotation works**:
+```
+rotation_10 experiment:
+- Completed all 5 epochs successfully ✅
+- No TAL errors, no crashes
+- degrees=10.0 with mosaic=1.0 (no mixup)
+```
+
+**Why performance degrades**:
+1. **COTS orientation consistency**: Starfish may have preferred orientations in underwater video
+2. **Small object distortion**: Rotation can distort tiny objects, making them harder to detect
+3. **Insufficient epochs**: 5 epochs not enough to benefit from rotation diversity
+4. **Trade-off**: More augmentation diversity vs. object integrity
 
 **Evidence**:
 ```
 rotation_10:
 - mAP50: 0.1100 (-12.7%)
 - Val cls loss: 5.97 (highest, indicating confusion)
+- Precision/recall trade-off shifted negatively
 ```
 
-**Recommendation**: Keep rotation disabled for MPS training.
+**Three-way augmentation conflict**:
+- rotation + mosaic: ✅ Works (proven by ablation)
+- mixup + mosaic: ✅ Works (proven by ablation)
+- **rotation + mixup + mosaic: ❌ Fails** (TAL shape mismatch in Phase 2)
+
+**Recommendation**: Keep rotation disabled for optimal performance, not because of MPS incompatibility.
 
 ### 4. Mixup Augmentation: Neutral (mixup_0.1: +0.1%)
 
