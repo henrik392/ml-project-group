@@ -1,8 +1,21 @@
 # Phase 2 Completion: Next Steps & Experiments
 
-**Date**: 2025-12-22
-**Current Status**: Ablation study complete, ready for next phase
+**Date**: 2025-12-22 (Updated with YOLOv11 research)
+**Current Status**: Ablation study complete + YOLOv11 vs YOLOv5 analysis complete
 **Current Best**: Baseline @ 10 epochs, mAP50 = 0.154, Recall = 0.091, CV F2 ≈ 0.11
+
+## 🔄 Major Update: YOLOv11 Research Changes Priorities
+
+**Key realization**: The competition used YOLOv5 (2022). We're using YOLOv11 (2024) - fundamentally different architecture.
+
+**What changed**:
+1. **YOLOv11 defaults are strong** → Our ablation study validated this!
+2. **Resolution matters most** → 1280px is now TOP priority (biggest small-object win)
+3. **Temporal smoothing has very high ROI** → Moved from Phase 3 to Priority 2
+4. **SAHI is expensive** → Downgraded to "only if needed" (Priority 5)
+5. **Don't blindly copy YOLOv5 hyperparameters** → Focus on architecture not tuning
+
+See `reports/yolov11_vs_yolov5_analysis.md` for full analysis.
 
 ---
 
@@ -24,65 +37,72 @@ Precision:  62.0% (good, but we need more detections)
 
 ## Recommended Experiments (Priority Order)
 
-### 🔥 Priority 1: Extend Training (MUST DO)
+**UPDATED BASED ON YOLOV11 RESEARCH** (see reports/yolov11_vs_yolov5_analysis.md)
 
-**Hypothesis**: 10 epochs is insufficient, model hasn't converged
+Key insight: YOLOv11 defaults are strong. Focus on **resolution + temporal** over hyperparameter tuning.
 
-**Experiment 1.1: Baseline @ 30 Epochs**
+### 🔥 Priority 1: Resolution Increase (BIGGEST WIN FOR SMALL OBJECTS)
+
+**Rationale**: Research shows this is the #1 improvement for tiny objects in YOLOv11
+
+**Experiment 1.1: 1280px Resolution @ 30 Epochs** ⭐ TOP PRIORITY
+```bash
+uv run src/training/train_baseline.py --fold 0 --epochs 30 --imgsz 1280 --model n --device mps --batch 4
+```
+
+**Expected outcome**:
+- mAP50: 0.25-0.35 (+60-130% vs 640px)
+- Recall: 0.25-0.35 (+175-285% vs 640px)
+- Small objects: +30-50% detection rate
+- Time: ~12 hours (4× slower due to 4× pixels)
+- Memory: Requires batch=4 (not 16)
+
+**Success criteria**: Recall > 0.25 OR mAP50 > 0.25
+
+**Experiment 1.2: Baseline 640px @ 30 Epochs** (for comparison)
 ```bash
 uv run src/training/train_baseline.py --fold 0 --epochs 30 --model n --device mps
 ```
 
 **Expected outcome**:
-- mAP50: 0.20-0.25 (+30-60% improvement)
-- Recall: 0.15-0.20 (+65-120% improvement)
+- mAP50: 0.20-0.25
+- Recall: 0.15-0.20
 - Time: ~3 hours
 
-**Success criteria**: mAP50 > 0.18 OR Recall > 0.15
-
-**Experiment 1.2: Baseline + Mixup @ 30 Epochs** (parallel)
-```bash
-# Modify train_baseline.py to add mixup=0.1
-uv run src/training/train_baseline.py --fold 0 --epochs 30 --model n --device mps
-```
-
-**Expected outcome**:
-- mAP50: 0.20-0.26 (similar or +2-3% vs baseline)
-- Recall: 0.15-0.21
-- Time: ~3 hours
-
-**Success criteria**: mAP50 > baseline_30epochs
+**Success criteria**: Establishes baseline for resolution comparison
 
 ---
 
-### 🎯 Priority 2: SAHI Inference (HIGH IMPACT)
+### 🎯 Priority 2: Temporal Post-Processing (VERY HIGH ROI)
 
-**Hypothesis**: Slicing images will dramatically improve small object detection
+**Rationale**: Research shows this has **very high ROI** - 1st place secret sauce, minimal cost
 
-**Experiment 2.1: SAHI Implementation**
+**Experiment 2.1: Temporal Confidence Boosting**
 ```bash
-# Create src/inference/sahi_predict.py
-# Use baseline model weights from Fold 0
+# Create src/postprocessing/temporal_smoothing.py
+# Boost confidence for detections in nearby frames
 ```
 
-**SAHI configuration to test**:
-- Slice size: 640×640 (same as training)
-- Overlap ratio: 0.2, 0.3, 0.4 (test all)
-- Confidence threshold: 0.25 (default)
+**Strategy**:
+- If starfish detected in frame N
+- Boost confidence scores in frames N-2, N-1, N+1, N+2
+- Use video sequence information (starfish move slowly)
+- Create "attention areas" around previous detections
 
 **Expected outcome**:
-- Recall: +50-100% (0.09 → 0.13-0.18 @ 10 epochs)
-- Recall: +50-100% (0.15 → 0.22-0.30 @ 30 epochs)
-- mAP50: May decrease slightly (more false positives)
+- F2: +5-10% (0.40 → 0.45-0.50)
+- Recall: +10-20% via confidence boosting
+- Precision: Minimal impact or slight improvement
+- Cost: Minimal (post-processing only, no retraining)
 
-**Success criteria**: Recall > 0.20 on Fold 0 validation
+**Success criteria**: F2 > 0.45 on Fold 0
 
 **Implementation steps**:
-1. Install SAHI: `uv add sahi`
-2. Create prediction script with slicing
-3. Test on 100 validation images
-4. Sweep overlap ratios
-5. Run on full Fold 0 validation set
+1. Extract frame sequences from videos
+2. Track detection positions across frames
+3. Implement confidence boosting logic
+4. Test on validation set
+5. Tune boosting parameters (radius, strength)
 
 ---
 
@@ -133,54 +153,80 @@ uv run src/training/train_baseline.py --fold 2 --epochs 30 --model n --device mp
 
 ---
 
-### ⚡ Priority 5: Larger Model (IF NEEDED)
+### ⚡ Priority 5: SAHI Slicing (ONLY IF STILL RECALL-LIMITED)
 
-**Hypothesis**: YOLOv11s has more capacity for small objects
+**Rationale**: Research shows SAHI is expensive (2-6× slower). Use only if above methods insufficient.
 
-**Experiment 5.1: YOLOv11s @ 30 Epochs**
+**Experiment 5.1: SAHI Implementation**
 ```bash
-uv run src/training/train_baseline.py --fold 0 --epochs 30 --model s --device mps
+# Create src/inference/sahi_predict.py
+# Use best model weights from Priorities 1-4
 ```
 
-**When to run**: Only if baseline @ 30 epochs + SAHI + threshold tuning gives CV F2 < 0.60
+**When to run**: Only if resolution + temporal + threshold gives F2 < 0.60
+
+**SAHI configuration**:
+- Slice size: 640×640
+- Overlap ratio: 0.3-0.4
+- Confidence threshold: Optimized from Priority 3
+
+**Expected outcome**:
+- Recall: +50-100% (but 2-6× slower)
+- F2: +5-15%
+- Cost: Very expensive (use selectively)
+
+**Success criteria**: F2 > 0.65
+
+---
+
+### ⚡ Priority 6: Larger Model (IF NEEDED)
+
+**Rationale**: More model capacity for small objects
+
+**Experiment 6.1: YOLOv11s @ 30 Epochs (1280px)**
+```bash
+uv run src/training/train_baseline.py --fold 0 --epochs 30 --model s --imgsz 1280 --batch 2
+```
+
+**When to run**: Only if 1280px YOLOv11n + temporal + threshold gives F2 < 0.65
 
 **Expected outcome**:
 - mAP50: +5-10% vs nano
 - Recall: +3-5% vs nano
-- Time: ~4-5 hours (slower than nano)
+- Time: ~20-24 hours (3× slower than nano @ 1280px)
 
-**Trade-off**: Better performance but slower inference
+**Trade-off**: Better performance but much slower training/inference
 
 ---
 
-## Decision Tree
+## Decision Tree (Updated for YOLOv11)
 
 ```
 START
   │
-  ├─> Train baseline @ 30 epochs (Fold 0)
+  ├─> Train 1280px @ 30 epochs (Fold 0) 🔥 PRIORITY 1
   │     │
-  │     ├─> mAP50 > 0.20? ─YES─> ✅ Continue
-  │     │                  NO──> ⚠️ Try YOLOv11s
+  │     ├─> Recall > 0.25? ─YES─> ✅ Excellent, continue
+  │     │                   NO──> ⚠️ Try 640px comparison, may need YOLOv11s
   │     │
-  │     └─> Implement SAHI
+  │     └─> Implement temporal smoothing 🎯 PRIORITY 2
   │           │
-  │           ├─> Recall > 0.20? ─YES─> ✅ Continue
-  │           │                   NO──> ⚠️ Try larger slices or YOLOv11s
+  │           ├─> F2 > 0.45? ─YES─> ✅ Great progress!
+  │           │                NO──> ⚠️ Check temporal logic
   │           │
-  │           └─> Optimize confidence threshold
+  │           └─> Optimize confidence threshold 📊 PRIORITY 3
   │                 │
-  │                 ├─> F2 > 0.40? ─YES─> ✅ Continue
-  │                 │                NO──> ⚠️ Need Phase 3 (temporal)
+  │                 ├─> F2 > 0.55? ─YES─> ✅ Near target!
+  │                 │                NO──> ⚠️ May need SAHI or larger model
   │                 │
-  │                 └─> Train Fold 1 & 2
+  │                 └─> Train Fold 1 & 2 (1280px + temporal)
   │                       │
-  │                       ├─> Mean CV F2 > 0.50? ─YES─> ✅ Move to Phase 3
-  │                       │                        NO──> ⚠️ Try YOLOv11s or adjust strategy
+  │                       ├─> Mean CV F2 > 0.60? ─YES─> ✅ SUCCESS!
+  │                       │                        NO──> Try SAHI or YOLOv11s
   │                       │
-  │                       └─> Phase 3: Temporal Post-Processing
-  │                             │
-  │                             └─> Target: CV F2 > 0.70
+  │                       └─> If still F2 < 0.60:
+  │                             ├─> Try SAHI (Priority 5)
+  │                             └─> Try YOLOv11s @ 1280px (Priority 6)
 ```
 
 ---
@@ -241,18 +287,39 @@ START
 
 ---
 
-## Immediate Actions (Next 24 Hours)
+## Immediate Actions (Updated Based on Research)
 
-1. **Start training**: Launch baseline @ 30 epochs on Fold 0
-   ```bash
-   uv run src/training/train_baseline.py --fold 0 --epochs 30 --model n --device mps
-   ```
+### Option A: Start with Resolution (Recommended 🔥)
 
-2. **Monitor progress**: Check after 1 hour to ensure no crashes
+**Best for**: Maximum small-object improvement
 
-3. **Prepare SAHI**: While training runs, implement SAHI inference script
+```bash
+# TOP PRIORITY: 1280px resolution
+uv run src/training/train_baseline.py --fold 0 --epochs 30 --imgsz 1280 --batch 4 --device mps
+```
 
-4. **Document setup**: Create training log template for tracking experiments
+**Time**: ~12 hours
+**Expected**: Recall +175-285% vs current
+
+### Option B: Establish 640px Baseline First (Conservative)
+
+**Best for**: Fair comparison between resolutions
+
+```bash
+# Baseline at 640px for comparison
+uv run src/training/train_baseline.py --fold 0 --epochs 30 --imgsz 640 --device mps
+```
+
+**Time**: ~3 hours
+**Expected**: mAP50 = 0.20-0.25
+
+**Then run Option A after completion**
+
+### While Training
+
+1. **Prepare temporal smoothing**: Implement confidence boosting logic
+2. **Study SAHI**: Understand implementation (but deprioritized now)
+3. **Monitor training**: Check GPU usage, memory, convergence
 
 ---
 
