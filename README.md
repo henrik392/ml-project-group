@@ -12,28 +12,110 @@ uv sync
 # Place kaggle.json in ~/.kaggle/
 ```
 
-## Usage
+## Quick Start
+
+Use the Makefile for common tasks:
 
 ```bash
-# Train
-python src/training/train.py
+# Download and prepare data (all steps)
+make data
 
-# Evaluate
-python src/evaluation/f2_score.py
+# Train baseline model
+make train
 
-# Predict
-python src/inference/predict.py
+# Train with resume
+make resume
 
-# Submit to Kaggle
-kaggle competitions submit -c tensorflow-great-barrier-reef -f submission.csv -m "Description"
+# Clean generated files
+make clean
 ```
 
-## Data
+## Data Preparation
 
-Download from Kaggle and place in `data/` directory:
+### Step 1: Download Competition Data
+
 ```bash
 kaggle competitions download -c tensorflow-great-barrier-reef
 unzip tensorflow-great-barrier-reef.zip -d data/
+```
+
+### Step 2: Convert to YOLO Format
+
+```bash
+uv run src/data/prepare_yolo_format.py
+```
+
+This creates `data/yolo_format/` with:
+- `images/` - All training images
+- `labels/` - YOLO format annotations (class x_center y_center width height)
+
+### Step 3: Create Cross-Validation Folds
+
+```bash
+uv run src/data/create_folds.py
+```
+
+This creates 3-fold splits by video_id in `data/folds/`:
+- Fold 0: Train on video_1, video_2 → Validate on video_0
+- Fold 1: Train on video_0, video_2 → Validate on video_1
+- Fold 2: Train on video_0, video_1 → Validate on video_2
+
+## Training
+
+```bash
+# Train single fold
+uv run src/training/train_baseline.py --fold 0 --epochs 30 --device mps
+
+# Train all folds
+uv run src/training/train_baseline.py --epochs 30 --device mps
+
+# Resume from checkpoint
+uv run src/training/train_baseline.py --fold 0 --epochs 30 --device mps --resume
+
+# Train on CPU (more stable but slower)
+uv run src/training/train_baseline.py --fold 0 --epochs 30 --device cpu
+
+# Adjust retry attempts (default: 5)
+uv run src/training/train_baseline.py --fold 0 --epochs 30 --device mps --max-retries 10
+```
+
+### Auto-Retry Feature
+
+Training now includes **automatic retry on errors** with checkpoint recovery:
+
+- **What it does:** If training crashes (tensor mismatches, MPS errors, OOM), it automatically:
+  1. Catches the error and logs it
+  2. Waits 10 seconds for system recovery
+  3. Resumes from the last checkpoint
+  4. Retries up to 5 times (configurable with `--max-retries`)
+
+- **Benefits:**
+  - No need to manually restart training after crashes
+  - Protects against transient MPS backend errors
+  - Preserves training progress automatically
+
+- **What it won't retry:**
+  - User interrupts (Ctrl+C)
+  - Configuration errors (missing files)
+
+## Evaluation
+
+```bash
+# Evaluate F2 score
+uv run src/evaluation/f2_score.py
+
+# Compare ablation study results
+uv run src/evaluation/compare_ablation.py --fold 0
+```
+
+## Inference
+
+```bash
+# Generate predictions
+uv run src/inference/predict.py
+
+# Submit to Kaggle
+kaggle competitions submit -c tensorflow-great-barrier-reef -f submission.csv -m "Phase X submission"
 ```
 
 ## Project Structure

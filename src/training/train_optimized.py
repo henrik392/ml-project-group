@@ -1,21 +1,28 @@
 """
 Optimized YOLOv11 training script for COTS detection.
 
-Phase 2: Hyperparameter optimization and augmentations based on 1st place solution.
+Phase 2: Optimized detection with winning solution hyperparameters.
 
-Key improvements from baseline:
-- Modified hyperparameters: box=0.2, iou=0.3
-- Augmentations: rotation, mixup, flips (NO HSV)
-- 50 epochs for proper convergence
-- Lower confidence threshold for higher recall
+Based on 1st place Kaggle solution:
+- box=0.2, iou_t=0.3
+- Rotation, mixup augmentations
+- No HSV augmentation
 """
 
 import argparse
-from pathlib import Path
 
-from ultralytics import YOLO
+from src.training.config import OptimizedConfig
+from src.training.utils import (
+    find_latest_checkpoint,
+    load_model_with_checkpoint,
+    print_training_header,
+    print_training_summary,
+    verify_dataset_config,
+    with_retry,
+)
 
 
+@with_retry(max_retries=5, wait_time=10)
 def train_fold(
     fold: int = 0,
     model_size: str = "n",
@@ -23,10 +30,12 @@ def train_fold(
     imgsz: int = 640,
     batch: int = 16,
     device: str = "mps",
-    project: str = "runs/optimized",
+    project: str = "runs/train",
+    resume: bool = False,
+    _retry_count: int = 0,
 ) -> None:
     """
-    Train YOLOv11 on a specific fold with optimized hyperparameters.
+    Train optimized YOLOv11 on a specific fold with winning solution hyperparameters.
 
     Args:
         fold: Fold number (0, 1, or 2)
@@ -36,70 +45,66 @@ def train_fold(
         batch: Batch size
         device: Device to use ('mps' for M4 Max, 'cuda' for GPU, 'cpu')
         project: Project directory for saving runs
+        resume: Resume from last checkpoint if available
+        _retry_count: Internal retry counter (set by decorator)
     """
-    print(f"\n{'='*80}")
-    print(f"Training YOLOv11{model_size} (Optimized) on Fold {fold}")
-    print(f"{'='*80}\n")
-
-    # Load model
-    model = YOLO(f"yolo11{model_size}.pt")
-
-    # Dataset config
-    data_config = f"configs/dataset_fold_{fold}.yaml"
-
-    # Verify config exists
-    if not Path(data_config).exists():
-        raise FileNotFoundError(f"Dataset config not found: {data_config}")
-
-    # Train with optimized hyperparameters
-    results = model.train(
-        data=data_config,
+    # Create optimized configuration with winning solution hyperparameters
+    config = OptimizedConfig(
+        fold=fold,
+        model_size=model_size,
         epochs=epochs,
         imgsz=imgsz,
         batch=batch,
         device=device,
         project=project,
-        name=f"yolo11{model_size}_fold{fold}_opt",
-        # Training settings
-        patience=15,  # Increased patience for 50 epochs
-        save=True,
-        plots=True,
-        val=True,
-        amp=True,  # Automatic Mixed Precision
-        verbose=True,
-        # Optimized hyperparameters (from 1st place solution)
-        box=5.0,  # Box loss gain (default: 7.5) - reduced for small objects
-        # NOTE: box=0.2 from winning solution may be too aggressive, causing TAL issues
-        # NOTE: iou_t=0.3 is for inference/NMS, not training - set during prediction instead
-        # Augmentations - minimal set to avoid TAL errors
-        degrees=0.0,  # Disabled - rotation with mosaic causes TAL errors
-        # mixup=0.1,  # Disabled - causing shape mismatch errors with task-aligned assigner
-        fliplr=0.5,  # Horizontal flip probability (default: 0.5)
-        flipud=0.0,  # No vertical flip (default: 0.0)
-        # NO HSV augmentation (per winning solution)
-        hsv_h=0.0,  # Hue augmentation (default: 0.015)
-        hsv_s=0.0,  # Saturation augmentation (default: 0.7)
-        hsv_v=0.0,  # Value augmentation (default: 0.4)
-        # Other augmentations
-        translate=0.1,  # Translation (default: 0.1)
-        scale=0.5,  # Scale (default: 0.5)
-        mosaic=1.0,  # Mosaic augmentation (default: 1.0)
-        # Learning rate
-        lr0=0.01,  # Initial learning rate (default: 0.01)
-        lrf=0.01,  # Final learning rate factor (default: 0.01)
+        resume=resume,
     )
 
-    print(f"\n{'='*80}")
-    print(f"Training complete!")
-    print(f"Results saved to: {results.save_dir}")
-    print(f"{'='*80}\n")
+    # Print training header
+    print_training_header(
+        fold=fold,
+        model_size=model_size,
+        phase="Optimized (Winning Solution)",
+        auto_retry=True,
+        max_retries=5,
+    )
 
-    # Print final metrics
-    if hasattr(results, "results_dict"):
-        metrics = results.results_dict
-        print("Final Metrics:")
-        for key, value in metrics.items():
-            print(f"  {key}: {value}")
+    # Print hyperparameters being used
+    print("Optimized Hyperparameters:")
+    for key, value in config.hyperparameters.items():
+        print(f"  {key}: {value}")
+    print()
+
+    # Verify dataset config exists
+    verify_dataset_config(fold)
+
+    # Find checkpoint if resuming or retrying
+    checkpoint_path = None
+    if resume or _retry_count > 0:
+        checkpoint_path = find_latest_checkpoint(project, config.get_run_name())
+        if checkpoint_path:
+            if _retry_count > 0:
+                print(f"\n[RETRY {_retry_count}/5] Resuming from checkpoint: {checkpoint_path}")
+            else:
+                print(f"Resuming from checkpoint: {checkpoint_path}")
+        elif resume:
+            print("No checkpoint found, starting from pretrained weights")
+
+    # Load model
+    model = load_model_with_checkpoint(model_size, checkpoint_path)
+
+    # Get training kwargs
+    train_kwargs = config.to_train_kwargs()
+
+    # Set resume flag if we have a checkpoint
+    if checkpoint_path:
+        train_kwargs["resume"] = True
+
+    # Train
+    results = model.train(**train_kwargs)
+
+    # Print summary
+    print_training_summary(results, results.save_dir)
 
     return results
 
@@ -161,7 +166,9 @@ def train_all_folds(
 
 def main():
     """Main training function."""
-    parser = argparse.ArgumentParser(description="Train YOLOv11 with optimized hyperparameters")
+    parser = argparse.ArgumentParser(
+        description="Train YOLOv11 with optimized hyperparameters (winning solution)"
+    )
     parser.add_argument(
         "--fold",
         type=int,
@@ -169,16 +176,15 @@ def main():
         help="Specific fold to train (0, 1, or 2). If None, train all folds.",
     )
     parser.add_argument(
-        "--model",
-        type=str,
-        default="n",
-        choices=["n", "s", "m", "l", "x"],
-        help="Model size",
+        "--model", type=str, default="n", choices=["n", "s", "m", "l", "x"], help="Model size"
     )
     parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
     parser.add_argument("--imgsz", type=int, default=640, help="Image size")
     parser.add_argument("--batch", type=int, default=16, help="Batch size")
     parser.add_argument("--device", type=str, default="mps", help="Device (mps, cuda, cpu)")
+    parser.add_argument(
+        "--resume", action="store_true", help="Resume from last checkpoint if available"
+    )
 
     args = parser.parse_args()
 
@@ -191,6 +197,7 @@ def main():
             imgsz=args.imgsz,
             batch=args.batch,
             device=args.device,
+            resume=args.resume,
         )
     else:
         # Train all folds
