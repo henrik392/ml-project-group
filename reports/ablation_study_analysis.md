@@ -50,42 +50,53 @@
 
 ### 1. HSV Augmentation is Critical (no_hsv: -34.3%)
 
-**Finding**: Disabling HSV augmentation caused the **worst performance drop** of all experiments.
+**Observation**: Disabling HSV augmentation caused the **worst performance drop** of all experiments (-34.3% mAP50).
 
-**Explanation**:
-- Underwater imagery has extreme color variations (depth, lighting, water clarity)
-- HSV augmentation helps model generalize across these conditions
-- Without it, model overfits to specific color distributions in training set
+**Hypothesis**: HSV augmentation may be critical for underwater imagery because:
+- Underwater scenes exhibit extreme color variation due to depth, lighting, and water clarity
+- HSV augmentation may help the model generalize across these varying conditions
+- Without it, the model may overfit to specific color distributions in the training set
 
-**Implication**: This was the PRIMARY reason Phase 2 failed! The winning solution said "no HSV" but that's because their dataset may have had different characteristics.
+**Evidence Supporting Hypothesis**:
+- Validation box loss increased from 2.10 → 2.36 (worse localization)
+- Training classification loss decreased (2.09 → 1.71), suggesting the model learned simpler patterns
+- Validation classification loss also decreased (5.20 → 4.35), but mAP50 still dropped significantly
 
-**Evidence**:
-```
-no_hsv:
-- mAP50: 0.0828 (-34.3% vs baseline)
-- Val box loss: 2.36 (highest, indicating poor localization)
-- Val cls loss: 4.35 (lowest, but doesn't help performance)
-```
+**Implication**: This likely explains why Phase 2 failed. The winning solution disabled HSV, but their dataset characteristics may differ from ours (different cameras, depths, or water conditions).
+
+**Further Investigation Needed**:
+- Test HSV at different intensities to find optimal values
+- Analyze color distribution differences between training and validation sets
+- Compare our dataset's color characteristics with the winning team's dataset
 
 ### 2. Box Loss Weight: Higher is Better (box reductions: -7% to -31%)
 
-**Finding**: ALL attempts to reduce box loss weight hurt performance. Larger reductions hurt more.
+**Observation**: ALL attempts to reduce box loss weight from the default (7.5) resulted in performance degradation. Larger reductions caused more severe degradation.
 
-| Box Weight | mAP50 | Change | Conclusion |
-|------------|-------|--------|------------|
+| Box Weight | mAP50 | Change | Result |
+|------------|-------|--------|--------|
 | 7.5 (baseline) | 0.1260 | 0.0% | ✅ Best |
-| 6.5 | 0.0870 | -30.9% | ❌ Worst box change |
-| 6.0 | 0.1072 | -14.9% | ⚠️ Bad |
-| 5.5 | 0.1173 | -6.9% | ⚠️ Bad |
-| 5.0 | 0.1167 | -7.3% | ⚠️ Bad |
+| 6.5 | 0.0870 | -30.9% | ❌ Worst |
+| 6.0 | 0.1072 | -14.9% | ⚠️ Poor |
+| 5.5 | 0.1173 | -6.9% | ⚠️ Poor |
+| 5.0 | 0.1167 | -7.3% | ⚠️ Poor |
 
-**Explanation**:
-- Lower box weight = model focuses less on precise localization
-- COTS starfish are small objects requiring precise bounding boxes
-- Reducing box weight from 7.5 reduced localization accuracy
-- Training losses decreased, but validation performance got worse (overfitting)
+**Hypothesis**: Lower box weights may hurt performance in our case because:
+- COTS starfish are small objects that may require precise bounding box localization
+- Lower box weight reduces the model's focus on localization accuracy
+- The YOLOv11n nano model may have limited capacity that benefits from stronger localization signal
 
-**Implication**: The winning solution's box=0.2 may work with larger models or more augmentation, but NOT for our nano model + limited augmentation.
+**Evidence**:
+- Training box losses decreased with lower weights (1.99 → 1.33 at box=5.0)
+- Validation performance decreased despite lower training loss
+- This pattern suggests overfitting to training data with insufficient localization accuracy
+
+**Implication**: The winning solution's box=0.2 may work with larger models (more capacity) or stronger augmentation (more regularization), but appears suboptimal for our YOLOv11n + limited augmentation setup.
+
+**Further Investigation Needed**:
+- Test box weight reduction with YOLOv11s/m (larger models)
+- Test box=0.2 with full augmentation suite (if we can resolve TAL errors)
+- Analyze bounding box prediction accuracy at different box weights
 
 ### 3. Rotation Augmentation Hurts Performance (rotation_10: -12.7%)
 
@@ -101,11 +112,11 @@ rotation_10 experiment:
 - degrees=10.0 with mosaic=1.0 (no mixup)
 ```
 
-**Why performance degrades**:
-1. **COTS orientation consistency**: Starfish may have preferred orientations in underwater video
-2. **Small object distortion**: Rotation can distort tiny objects, making them harder to detect
-3. **Insufficient epochs**: 5 epochs not enough to benefit from rotation diversity
-4. **Trade-off**: More augmentation diversity vs. object integrity
+**Hypotheses for performance degradation**:
+1. **COTS orientation consistency** (unverified): Starfish may have preferred orientations in underwater video sequences. Rotation augmentation may introduce unrealistic orientations.
+2. **Small object distortion** (plausible): Rotation transformations may distort tiny objects, potentially making them harder to detect at small scales.
+3. **Insufficient training** (likely): 5 epochs may not be enough for the model to benefit from increased augmentation diversity.
+4. **Augmentation trade-off**: More diversity vs. object integrity - needs empirical testing.
 
 **Evidence**:
 ```
@@ -120,7 +131,13 @@ rotation_10:
 - mixup + mosaic: ✅ Works (proven by ablation)
 - **rotation + mixup + mosaic: ❌ Fails** (TAL shape mismatch in Phase 2)
 
-**Recommendation**: Keep rotation disabled for optimal performance, not because of MPS incompatibility.
+**Further Investigation Needed**:
+- Analyze ground truth bounding box orientations across video frames to test orientation consistency hypothesis
+- Test rotation at 30 epochs to see if performance improves with more training
+- Visualize detection quality with/without rotation on small objects
+- Test rotation with larger models (YOLOv11s/m) that may better handle augmentation diversity
+
+**Recommendation**: Keep rotation disabled for optimal performance based on current evidence. This is a modeling choice, not a technical MPS incompatibility.
 
 ### 4. Mixup Augmentation: Neutral (mixup_0.1: +0.1%)
 

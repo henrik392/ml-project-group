@@ -59,9 +59,9 @@ cannot be broadcast to indexing result of shape [Y]
 3. **Mixup** blends two batches → expects consistent shapes
 4. **TAL** tries to assign targets → tensor dimension mismatch
 
-**Why it fails:** The augmentation pipeline in Ultralytics doesn't properly track tensor shapes when all three augmentations apply in sequence. The TAL assigner receives mismatched ground truth and prediction tensor shapes.
+**Hypothesis for failure mechanism**: The augmentation pipeline in Ultralytics may not properly track tensor shapes when all three augmentations apply in sequence. The TAL assigner appears to receive mismatched ground truth and prediction tensor shapes, causing the runtime error.
 
-**MPS-specific aspect:** MPS backend uses different tensor layouts than CUDA, making shape mismatches more likely to surface.
+**MPS-specific aspect (hypothesis)**: MPS backend may use different tensor layouts or shape handling than CUDA, potentially making shape mismatches more likely to surface. This would need to be verified by testing the same three-way augmentation combination on CUDA hardware.
 
 ---
 
@@ -71,8 +71,8 @@ cannot be broadcast to indexing result of shape [Y]
 
 | Augmentation | Status | mAP50 Change | Observations |
 |--------------|--------|--------------|--------------|
-| **HSV (h=0.015, s=0.7, v=0.4)** | ✅ CRITICAL | -34.3% when disabled | Underwater images need color variation |
-| **Rotation (10°)** | ⚠️ Works but hurts | -12.7% | Distorts small objects, COTS have consistent orientation |
+| **HSV (h=0.015, s=0.7, v=0.4)** | ✅ CRITICAL | -34.3% when disabled | Hypothesis: Underwater color variation requires HSV |
+| **Rotation (10°)** | ⚠️ Works but hurts | -12.7% | Hypothesis: May distort small objects or conflict with COTS orientation patterns |
 | **Mixup (0.1)** | ✅ Neutral | +0.1% | Safe to enable, minimal impact at 5 epochs |
 | **Mosaic (1.0)** | ✅ Baseline | 0.0% (control) | Standard, always enabled |
 | **Horizontal flip (0.5)** | ✅ Baseline | 0.0% (control) | Standard, always enabled |
@@ -197,11 +197,11 @@ Recall:    0.091 (9.1%)    ❌ CRITICAL BOTTLENECK
 
 **Problem:** We're missing 91% of starfish!
 
-**Why low recall?**
-1. **Small objects** - COTS starfish are tiny in 1920×1080 frames
-2. **Insufficient training** - Only 10 epochs, model hasn't converged
-3. **Conservative predictions** - High precision means model is too cautious
-4. **No multi-scale inference** - Only detecting at single scale (640px)
+**Hypotheses for low recall:**
+1. **Small object challenge** (likely) - COTS starfish appear tiny in 1920×1080 frames, making detection difficult
+2. **Insufficient training** (likely) - Only 10 epochs, model may not have converged
+3. **Conservative predictions** (hypothesis) - High precision (62%) suggests model may be overly cautious in making predictions
+4. **Single-scale detection** (likely contributing) - Model only detects at 640px resolution; multi-scale inference may help
 
 **Target:** F2 score > 0.70
 - F2 = (1 + 4) × (P × R) / (4×P + R)
