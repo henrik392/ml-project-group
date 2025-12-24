@@ -230,13 +230,81 @@ uv run src/evaluation/compare_ablation.py --fold 0
 kaggle competitions submit -c tensorflow-great-barrier-reef -f submission.csv -m "Phase X submission"
 ```
 
-## Winning Solution Key Techniques
-- 3-fold CV by video_id (Trust CV)
+## YOLOv11 Best Practices for COTS Detection
+
+**IMPORTANT**: YOLOv11 (2024) has much better defaults than YOLOv5 (2022). Don't blindly copy old winning solutions!
+
+### What Changed Since YOLOv5
+- **Anchor-free detection** → better small-object localization
+- **Decoupled heads** → cleaner classification vs box regression
+- **Better multi-scale features** → fewer missed tiny objects
+- **NMS-free training** (v10+) → fewer duplicate boxes
+- **Result**: 1 strong YOLOv11 model ≈ old multi-model ensembles
+
+### Hyperparameters
+
+**Stick with YOLOv11 defaults** - they're much stronger than YOLOv5-era defaults.
+
+**Only worth experimenting with**:
+1. **Higher image resolution** (biggest win for small starfish)
+   - Try 1280 or 1536 if memory allows
+2. **Box loss ↑ and IoU training threshold ↑** (from 1st place YOLOv5)
+   - ⚠️ **Note**: Ablation study found box weight reduction (6.5, 5.0, 0.2) ALL hurt performance (-30.9%, -24%, -24% respectively)
+   - YOLOv11 default box=7.5 works best for this dataset
+   - iou=0.3 (vs default 0.7) - not yet tested
+3. **Confidence threshold tuning** for F2 (recall-heavy) metric
+   - Lower conf threshold to boost recall
+4. **Model size scaling** (YOLOv11-s/m/l/x)
+   - Bigger models for better accuracy
+
+**If baseline beats experiments → trust it and move on**
+
+### Augmentations
+
+**Default augmentations usually win** - don't over-optimize fancy augmentations.
+
+YOLOv11 defaults are already strong:
+- HSV, translation, scale, fliplr, mosaic, auto-augment
+
+### SAHI (Slicing Aided Hyper Inference)
+
+✅ **Yes**, it works for tiny objects
+❌ **No**, it's expensive (2-6× slower inference)
+
+**Recommendation**:
+- Use only if accuracy > speed
+- Or do selective slicing (fallback pass, not every frame)
+
+### High-ROI Strategies
+
+1. **Temporal smoothing** (VERY HIGH ROI)
+   - Boost detections in nearby frames if a starfish appears once
+   - Simple temporal logic > heavy trackers
+
+2. **Lower conf threshold + post-filtering**
+   - Recall > precision (F2 metric prioritizes recall 5×)
+
+3. **Higher-res final model** (YOLOv11-L/X @ 1280px)
+
+4. **Optional** (only if time allows):
+   - Light ensembling (2 models max)
+   - Patch-trained secondary model
+
+### What NOT to Over-Optimize
+
+❌ Fancy augmentations → defaults usually win
+❌ Heavy ensembling → YOLOv11 reduces need
+❌ Full trackers → minimal gain vs simple temporal logic
+
+### Historical Context: YOLOv5 Winning Solution (2022)
+
+The original competition was won with YOLOv5 using:
 - Modified hyperparams: box=0.2, iou_t=0.3
 - Augmentations: rotation, mixup, Transpose (NO HSV)
-- SAHI for small object detection
-- Temporal post-processing (attention area boosting)
-- Classification re-scoring (optional, Phase 5)
+- SAHI for small objects
+- Temporal post-processing
+
+**Use as inspiration only** - YOLOv11 architecture is fundamentally different.
 
 ## Validation Strategy
 ```
@@ -245,9 +313,33 @@ Fold 1: Train on video_0, video_2 → Validate on video_1
 Fold 2: Train on video_0, video_1 → Validate on video_2
 ```
 
-## Target Scores
-- Phase 1: Any valid CV F2 (baseline)
-- Phase 2: CV F2 > 0.65 (optimized detection)
-- Phase 3: CV F2 > 0.68 (temporal post-processing)
-- Phase 4: CV F2 > 0.70 (final model)
-- Phase 5: CV F2 > 0.72 (optional classification re-scoring)
+## Recommended Development Plan
+
+### Phase 1: Baseline ✓
+- **Goal**: Validate pipeline, establish baseline with YOLOv11n defaults
+- **Status**: COMPLETE
+- **Result**: mAP50 = 0.126, Recall = 0.114 (epoch 10)
+
+### Phase 2: Resolution + Model Scaling
+- **Keep baseline hyperparams** (defaults are strong!)
+- **Scale resolution**: Try 1280px (biggest win for small objects)
+- **Scale model size**: YOLOv11-s or YOLOv11-m
+- **Tune confidence threshold** for F2 score (lower = more recall)
+- **Target**: mAP50 > 0.30, Recall > 0.40
+
+### Phase 3: Temporal Smoothing (High ROI)
+- **Add temporal confidence boosting** (boost detections in nearby frames)
+- **Simple temporal logic** (no heavy trackers)
+- **Target**: F2 > 0.60
+
+### Phase 4: Selective Optimization
+- **Try box loss & IoU threshold** (box=0.2, iou=0.3) if needed
+- **Try SAHI** only if still recall-limited
+- **Optional**: Light ensembling (2 models max)
+- **Target**: F2 > 0.70
+
+### Target Scores
+- Phase 1: Baseline validation (any F2) ✓
+- Phase 2: Resolution + model scaling (F2 > 0.50)
+- Phase 3: Temporal smoothing (F2 > 0.60)
+- Phase 4: Selective optimization (F2 > 0.70)
