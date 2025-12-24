@@ -17,3 +17,5 @@ wheels/
 # Model weights and outputs
 /models/
 /runs/
+*.pt
+*.log

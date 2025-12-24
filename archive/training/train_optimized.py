@@ -1,12 +1,17 @@
 """
-Baseline YOLOv11 training script for COTS detection.
+Optimized YOLOv11 training script for COTS detection.
 
-Phase 1: Simple baseline with default hyperparameters.
+Phase 2: Optimized detection with winning solution hyperparameters.
+
+Based on 1st place Kaggle solution:
+- box=0.2, iou_t=0.3
+- Rotation, mixup augmentations
+- No HSV augmentation
 """
 
 import argparse
 
-from src.training.config import BaselineConfig
+from src.training.config import OptimizedConfig
 from src.training.utils import (
     find_latest_checkpoint,
     load_model_with_checkpoint,
@@ -30,7 +35,7 @@ def train_fold(
     _retry_count: int = 0,
 ) -> None:
     """
-    Train YOLOv11 on a specific fold with automatic retry on errors.
+    Train optimized YOLOv11 on a specific fold with winning solution hyperparameters.
 
     Args:
         fold: Fold number (0, 1, or 2)
@@ -43,8 +48,8 @@ def train_fold(
         resume: Resume from last checkpoint if available
         _retry_count: Internal retry counter (set by decorator)
     """
-    # Create configuration
-    config = BaselineConfig(
+    # Create optimized configuration with winning solution hyperparameters
+    config = OptimizedConfig(
         fold=fold,
         model_size=model_size,
         epochs=epochs,
@@ -59,10 +64,16 @@ def train_fold(
     print_training_header(
         fold=fold,
         model_size=model_size,
-        phase="Baseline",
+        phase="Optimized (Winning Solution)",
         auto_retry=True,
         max_retries=5,
     )
+
+    # Print hyperparameters being used
+    print("Optimized Hyperparameters:")
+    for key, value in config.hyperparameters.items():
+        print(f"  {key}: {value}")
+    print()
 
     # Verify dataset config exists
     verify_dataset_config(fold)
@@ -121,9 +132,9 @@ def train_all_folds(
     results = {}
 
     for fold in range(3):
-        print(f"\n{'#' * 80}")
+        print(f"\n{'#'*80}")
         print(f"# FOLD {fold}/3")
-        print(f"{'#' * 80}\n")
+        print(f"{'#'*80}\n")
 
         fold_results = train_fold(
             fold=fold,
@@ -137,9 +148,9 @@ def train_all_folds(
         results[f"fold_{fold}"] = fold_results
 
     # Summary
-    print(f"\n{'=' * 80}")
+    print(f"\n{'='*80}")
     print("3-FOLD CROSS-VALIDATION SUMMARY")
-    print(f"{'=' * 80}\n")
+    print(f"{'='*80}\n")
 
     for fold, fold_results in results.items():
         print(f"{fold}:")
@@ -147,13 +158,17 @@ def train_all_folds(
             metrics = fold_results.results_dict
             print(f"  mAP50: {metrics.get('metrics/mAP50(B)', 'N/A')}")
             print(f"  mAP50-95: {metrics.get('metrics/mAP50-95(B)', 'N/A')}")
+            print(f"  Precision: {metrics.get('metrics/precision(B)', 'N/A')}")
+            print(f"  Recall: {metrics.get('metrics/recall(B)', 'N/A')}")
 
     return results
 
 
 def main():
     """Main training function."""
-    parser = argparse.ArgumentParser(description="Train YOLOv11 baseline with auto-retry")
+    parser = argparse.ArgumentParser(
+        description="Train YOLOv11 with optimized hyperparameters (winning solution)"
+    )
     parser.add_argument(
         "--fold",
         type=int,
@@ -169,12 +184,6 @@ def main():
     parser.add_argument("--device", type=str, default="mps", help="Device (mps, cuda, cpu)")
     parser.add_argument(
         "--resume", action="store_true", help="Resume from last checkpoint if available"
-    )
-    parser.add_argument(
-        "--max-retries",
-        type=int,
-        default=5,
-        help="Maximum number of retry attempts on error (default: 5)",
     )
 
     args = parser.parse_args()
