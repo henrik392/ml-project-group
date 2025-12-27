@@ -1,6 +1,17 @@
 # Great Barrier Reef COTS Detection
 
+**Tsinghua University - Machine Learning Course Project**
+
 YOLOv11-based Crown-of-Thorns Starfish detection for the Kaggle TensorFlow Great Barrier Reef competition.
+
+## Academic Context
+
+- **Course**: Machine Learning, Tsinghua University
+- **Project Type**: Computer vision object detection research project
+- **Deliverables**: Technical report + presentation
+- **Dataset**: Kaggle TensorFlow Great Barrier Reef (23,501 underwater video frames)
+- **Task**: Detect Crown-of-Thorns Starfish (COTS) using deep learning
+- **Metric**: F2 Score (recall-weighted, 5× emphasis on recall over precision)
 
 ## Setup
 
@@ -129,7 +140,16 @@ kaggle competitions submit -c tensorflow-great-barrier-reef -f submission.csv -m
 │   ├── evaluation/   # F2 score evaluation
 │   ├── postprocessing/ # Temporal post-processing
 │   └── inference/    # Prediction pipeline
-├── reports/          # Score charts and documentation
+├── reports/          # Technical reports and documentation
+│   ├── baseline_results.md      # Phase 1 baseline analysis
+│   ├── phase2_analysis.md       # Phase 2 experiments
+│   ├── ablation_study_analysis.md
+│   ├── figures/                 # Training curves and visualizations
+│   └── final_report/            # Academic deliverables
+│       ├── methodology.md       # Research methodology
+│       ├── results.md           # Experimental results
+│       ├── analysis.md          # Discussion and insights
+│       └── presentation/        # Presentation materials
 └── analysis/         # Data analysis reports
 ```
 
@@ -142,8 +162,31 @@ Based on the 1st place Kaggle solution with modern improvements:
 - **Temporal post-processing** (attention area boosting)
 - **Underwater augmentations** (MotionBlur, RGBShift, CLAHE)
 
-## Competition
+## Competition & Dataset
 
 - **Task:** Detect Crown-of-Thorns Starfish (COTS) in underwater video
 - **Metric:** F2 Score (emphasizes recall over precision)
 - **Data:** 23,501 training frames from 3 videos
+- **Challenge:** Small objects, underwater lighting variation, class imbalance
+
+## Academic Deliverables
+
+### Final Report
+- **Methodology**: YOLOv11 architecture, training pipeline, cross-validation strategy
+- **Experiments**: Baseline establishment, ablation studies, hyperparameter optimization
+- **Results**: Performance metrics, comparative analysis, visual examples
+- **Discussion**: Scientific findings, hypothesis testing, limitations
+
+### Presentation
+- **Duration**: TBD
+- **Content**: Problem overview, approach, key findings, results, lessons learned
+- **Format**: Slides with visualizations, charts, example predictions
+
+### Documentation
+All experiments are documented with:
+- Training curves and performance metrics
+- Ablation study results
+- Visual examples (predictions, confusion matrices)
+- Scientific analysis (observations vs. hypotheses)
+
+See `reports/final_report/` for complete academic documentation.
