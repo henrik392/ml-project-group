@@ -68,7 +68,9 @@ def calculate_f2_single_image(
     true_positives = 0
 
     # Sort predictions by confidence (highest first)
-    pred_boxes_sorted = sorted(pred_boxes, key=lambda x: x.get("confidence", 1.0), reverse=True)
+    pred_boxes_sorted = sorted(
+        pred_boxes, key=lambda x: x.get("confidence", 1.0), reverse=True
+    )
 
     for pred_box in pred_boxes_sorted:
         best_iou = 0
@@ -125,8 +127,12 @@ def calculate_f2_dataset(
     )
 
     # Fill NaN with empty lists
-    merged["boxes_pred"] = merged["boxes_pred"].apply(lambda x: x if isinstance(x, list) else [])
-    merged["boxes_gt"] = merged["boxes_gt"].apply(lambda x: x if isinstance(x, list) else [])
+    merged["boxes_pred"] = merged["boxes_pred"].apply(
+        lambda x: x if isinstance(x, list) else []
+    )
+    merged["boxes_gt"] = merged["boxes_gt"].apply(
+        lambda x: x if isinstance(x, list) else []
+    )
 
     # Calculate F2 for each image
     precisions = []

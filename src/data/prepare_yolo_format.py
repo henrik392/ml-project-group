@@ -87,13 +87,15 @@ def convert_to_yolo_format(
             h_norm = max(0, min(1, h_norm))
 
             # Class 0 for COTS (Crown-of-Thorns Starfish)
-            yolo_annotations.append(f"0 {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}")
+            yolo_annotations.append(
+                f"0 {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}"
+            )
 
         # Write label file (empty if no annotations)
         with open(label_file, "w") as f:
             f.write("\n".join(yolo_annotations))
 
-    print(f"✓ Conversion complete!")
+    print("✓ Conversion complete!")
     print(f"  Images: {images_out}")
     print(f"  Labels: {labels_out}")
 
