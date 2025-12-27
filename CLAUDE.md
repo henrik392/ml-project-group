@@ -29,6 +29,22 @@
   * OpenCV allowed **only for visualization / video grids**
 * Run Python via **`uv run` only**
 * Train on **M4 Max (MPS)** or GPU if needed
+* **Code quality**:
+  * Use **ruff** for linting and formatting
+  * Remove dead/unused code (we have git history)
+  * Keep code simple - achieve results with minimal complexity
+
+**Ruff commands:**
+```bash
+# Check for linting issues
+uv run ruff check src/
+
+# Auto-fix issues
+uv run ruff check --fix src/
+
+# Format code
+uv run ruff format src/
+```
 
 ---
 

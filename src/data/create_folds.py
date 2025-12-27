@@ -56,8 +56,12 @@ def create_fold_splits(
             (fold_dir / split / "labels").mkdir(parents=True, exist_ok=True)
 
         # Get image IDs for this fold
-        train_ids = train_df[train_df["video_id"].isin(fold_config["train"])]["image_id"].tolist()
-        val_ids = train_df[train_df["video_id"].isin(fold_config["val"])]["image_id"].tolist()
+        train_ids = train_df[train_df["video_id"].isin(fold_config["train"])][
+            "image_id"
+        ].tolist()
+        val_ids = train_df[train_df["video_id"].isin(fold_config["val"])][
+            "image_id"
+        ].tolist()
 
         # Copy files for train split
         print(f"  Copying {len(train_ids)} train images...")

@@ -1,205 +1,141 @@
 """
 Baseline YOLOv11 training script for COTS detection.
 
-Phase 1: Simple baseline with default hyperparameters.
+Supports config-based training with automatic retry on errors.
 """
 
-import argparse
+from pathlib import Path
 
-from src.training.config import BaselineConfig
+from ultralytics import YOLO
+
 from src.training.utils import (
     find_latest_checkpoint,
-    load_model_with_checkpoint,
-    print_training_header,
-    print_training_summary,
-    verify_dataset_config,
     with_retry,
 )
 
 
 @with_retry(max_retries=5, wait_time=10)
-def train_fold(
-    fold: int = 0,
-    model_size: str = "n",
-    epochs: int = 50,
-    imgsz: int = 640,
-    batch: int = 16,
-    device: str = "mps",
-    project: str = "runs/train",
-    resume: bool = False,
+def train_from_config(
+    config: dict,
     _retry_count: int = 0,
-) -> None:
+) -> dict:
     """
-    Train YOLOv11 on a specific fold with automatic retry on errors.
+    Train YOLOv11 from experiment config with automatic retry on errors.
 
     Args:
-        fold: Fold number (0, 1, or 2)
-        model_size: Model size (n, s, m, l, x)
-        epochs: Number of training epochs
-        imgsz: Image size for training
-        batch: Batch size
-        device: Device to use ('mps' for M4 Max, 'cuda' for GPU, 'cpu')
-        project: Project directory for saving runs
-        resume: Resume from last checkpoint if available
+        config: Experiment configuration dict with keys:
+            - model: Model name (yolov11n, yolov5n, etc.)
+            - data: Path to dataset YAML
+            - fold_id: Fold number (0, 1, or 2)
+            - epochs: Number of training epochs
+            - imgsz: Image size for training
+            - batch: Batch size
+            - device: Device to use (default: 'mps')
+            - hyperparameters: Optional dict with box, cls, dfl, etc.
+            - augmentation: Optional dict with hsv_h, hsv_s, degrees, etc.
         _retry_count: Internal retry counter (set by decorator)
+
+    Returns:
+        Dict with training results including weights path and metrics
     """
-    # Create configuration
-    config = BaselineConfig(
-        fold=fold,
-        model_size=model_size,
-        epochs=epochs,
-        imgsz=imgsz,
-        batch=batch,
-        device=device,
-        project=project,
-        resume=resume,
+    # Extract config values with defaults
+    model_name = config.get("model", "yolov11n")
+    data_config = config.get(
+        "data", f"configs/dataset_fold_{config.get('fold_id', 0)}.yaml"
     )
+    fold_id = config.get("fold_id", 0)
+    epochs = config.get("epochs", 50)
+    imgsz = config.get("imgsz", 640)
+    batch = config.get("batch", 16)
+    device = config.get("device", "mps")
+    project = config.get("project", "runs/train")
+    resume = config.get("resume", False)
 
     # Print training header
-    print_training_header(
-        fold=fold,
-        model_size=model_size,
-        phase="Baseline",
-        auto_retry=True,
-        max_retries=5,
-    )
+    print(f"\n{'=' * 80}")
+    print(f"Training {model_name} - Fold {fold_id}")
+    print(f"{'=' * 80}")
+    print(f"Epochs: {epochs}, Image size: {imgsz}, Batch: {batch}, Device: {device}")
+    print("Auto-retry: Enabled (max 5 retries)")
+    print(f"{'=' * 80}\n")
 
     # Verify dataset config exists
-    verify_dataset_config(fold)
+    if not Path(data_config).exists():
+        raise FileNotFoundError(f"Dataset config not found: {data_config}")
 
     # Find checkpoint if resuming or retrying
+    run_name = f"{model_name}_fold{fold_id}"
     checkpoint_path = None
     if resume or _retry_count > 0:
-        checkpoint_path = find_latest_checkpoint(project, config.get_run_name())
+        checkpoint_path = find_latest_checkpoint(project, run_name)
         if checkpoint_path:
             if _retry_count > 0:
-                print(f"\n[RETRY {_retry_count}/5] Resuming from checkpoint: {checkpoint_path}")
+                print(
+                    f"\n[RETRY {_retry_count}/5] Resuming from checkpoint: {checkpoint_path}"
+                )
             else:
                 print(f"Resuming from checkpoint: {checkpoint_path}")
         elif resume:
             print("No checkpoint found, starting from pretrained weights")
 
     # Load model
-    model = load_model_with_checkpoint(model_size, checkpoint_path)
+    if checkpoint_path:
+        print(f"Loading from checkpoint: {checkpoint_path}")
+        model = YOLO(checkpoint_path)
+    else:
+        print(f"Loading pretrained {model_name}")
+        model = YOLO(f"{model_name}.pt")
 
-    # Get training kwargs
-    train_kwargs = config.to_train_kwargs()
+    # Build training kwargs
+    train_kwargs = {
+        "data": data_config,
+        "epochs": epochs,
+        "imgsz": imgsz,
+        "batch": batch,
+        "device": device,
+        "project": project,
+        "name": run_name,
+        "exist_ok": True,
+        "verbose": True,
+    }
+
+    # Add hyperparameters if provided
+    if "hyperparameters" in config:
+        train_kwargs.update(config["hyperparameters"])
+
+    # Add augmentation settings if provided
+    if "augmentation" in config:
+        train_kwargs.update(config["augmentation"])
 
     # Set resume flag if we have a checkpoint
     if checkpoint_path:
         train_kwargs["resume"] = True
 
     # Train
+    print("\nStarting training...")
     results = model.train(**train_kwargs)
 
-    # Print summary
-    print_training_summary(results, results.save_dir)
+    # Get weights path
+    weights_path = str(Path(results.save_dir) / "weights" / "best.pt")
 
-    return results
+    # Extract metrics from results
+    metrics = {
+        "weights": weights_path,
+        "save_dir": str(results.save_dir),
+    }
 
-
-def train_all_folds(
-    model_size: str = "n",
-    epochs: int = 50,
-    imgsz: int = 640,
-    batch: int = 16,
-    device: str = "mps",
-) -> dict:
-    """
-    Train on all 3 folds for cross-validation.
-
-    Args:
-        model_size: Model size (n, s, m, l, x)
-        epochs: Number of training epochs
-        imgsz: Image size
-        batch: Batch size
-        device: Device to use
-
-    Returns:
-        Dict with results for each fold
-    """
-    results = {}
-
-    for fold in range(3):
-        print(f"\n{'#' * 80}")
-        print(f"# FOLD {fold}/3")
-        print(f"{'#' * 80}\n")
-
-        fold_results = train_fold(
-            fold=fold,
-            model_size=model_size,
-            epochs=epochs,
-            imgsz=imgsz,
-            batch=batch,
-            device=device,
+    if hasattr(results, "results_dict"):
+        metrics.update(
+            {
+                "map50": results.results_dict.get("metrics/mAP50(B)", 0),
+                "map50_95": results.results_dict.get("metrics/mAP50-95(B)", 0),
+            }
         )
 
-        results[f"fold_{fold}"] = fold_results
-
-    # Summary
     print(f"\n{'=' * 80}")
-    print("3-FOLD CROSS-VALIDATION SUMMARY")
+    print("Training Complete")
+    print(f"Weights: {weights_path}")
+    print(f"Save dir: {results.save_dir}")
     print(f"{'=' * 80}\n")
 
-    for fold, fold_results in results.items():
-        print(f"{fold}:")
-        if hasattr(fold_results, "results_dict"):
-            metrics = fold_results.results_dict
-            print(f"  mAP50: {metrics.get('metrics/mAP50(B)', 'N/A')}")
-            print(f"  mAP50-95: {metrics.get('metrics/mAP50-95(B)', 'N/A')}")
-
-    return results
-
-
-def main():
-    """Main training function."""
-    parser = argparse.ArgumentParser(description="Train YOLOv11 baseline with auto-retry")
-    parser.add_argument(
-        "--fold",
-        type=int,
-        default=None,
-        help="Specific fold to train (0, 1, or 2). If None, train all folds.",
-    )
-    parser.add_argument(
-        "--model", type=str, default="n", choices=["n", "s", "m", "l", "x"], help="Model size"
-    )
-    parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
-    parser.add_argument("--imgsz", type=int, default=640, help="Image size")
-    parser.add_argument("--batch", type=int, default=16, help="Batch size")
-    parser.add_argument("--device", type=str, default="mps", help="Device (mps, cuda, cpu)")
-    parser.add_argument(
-        "--resume", action="store_true", help="Resume from last checkpoint if available"
-    )
-    parser.add_argument(
-        "--max-retries",
-        type=int,
-        default=5,
-        help="Maximum number of retry attempts on error (default: 5)",
-    )
-
-    args = parser.parse_args()
-
-    if args.fold is not None:
-        # Train single fold
-        train_fold(
-            fold=args.fold,
-            model_size=args.model,
-            epochs=args.epochs,
-            imgsz=args.imgsz,
-            batch=args.batch,
-            device=args.device,
-            resume=args.resume,
-        )
-    else:
-        # Train all folds
-        train_all_folds(
-            model_size=args.model,
-            epochs=args.epochs,
-            imgsz=args.imgsz,
-            batch=args.batch,
-            device=args.device,
-        )
-
-
-if __name__ == "__main__":
-    main()
+    return metrics

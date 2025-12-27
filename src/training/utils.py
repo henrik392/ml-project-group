@@ -59,7 +59,9 @@ def with_retry(max_retries: int = 5, wait_time: int = 10):
                     print(f"{'!' * 80}\n")
 
                     if retry_count <= max_retries:
-                        print(f"Retry {retry_count}/{max_retries} in {wait_time} seconds...")
+                        print(
+                            f"Retry {retry_count}/{max_retries} in {wait_time} seconds..."
+                        )
                         print("Will automatically resume from checkpoint.\n")
                         time.sleep(wait_time)
                     else:
