@@ -55,8 +55,9 @@ This project follows a clear narrative arc for the final report:
 # 1. Download and prepare data
 make data
 
-# 2. Run a single experiment
-uv run src/run_experiment.py --config configs/experiments/exp01_yolov5.yaml
+# 2. Run an experiment
+uv run src/run_experiment.py --config configs/experiments/exp02_yolov11_baseline.yaml
+# Or use shortcuts: make exp-baseline
 
 # 3. View all results
 cat outputs/metrics/results.csv
@@ -94,43 +95,42 @@ This creates **leave-one-video-out cross-validation (3 folds)** in `data/folds/`
 
 **Rationale**: Video frames are temporally correlated. Holding out full videos prevents data leakage and ensures realistic evaluation.
 
-## Training
+## Running Experiments
+
+All experiments use standardized YAML configs in `configs/experiments/`. The runner handles training, inference, evaluation, and result logging.
 
 ```bash
-# Train single fold
-uv run src/training/train_baseline.py --fold 0 --epochs 30 --device mps
+# Run a single experiment
+uv run src/run_experiment.py --config configs/experiments/exp02_yolov11_baseline.yaml
 
-# Train all folds
-uv run src/training/train_baseline.py --epochs 30 --device mps
+# Preview experiment without executing
+uv run src/run_experiment.py --config configs/experiments/exp01_yolov5_baseline.yaml --dry-run
 
-# Resume from checkpoint
-uv run src/training/train_baseline.py --fold 0 --epochs 30 --device mps --resume
-
-# Train on CPU (more stable but slower)
-uv run src/training/train_baseline.py --fold 0 --epochs 30 --device cpu
-
-# Adjust retry attempts (default: 5)
-uv run src/training/train_baseline.py --fold 0 --epochs 30 --device mps --max-retries 10
+# Quick shortcuts via Makefile
+make exp-baseline    # YOLOv11 baseline
+make exp-yolov5      # YOLOv5 baseline
+make exp-sahi        # SAHI inference
+make exp-bytetrack   # ByteTrack tracking
 ```
 
-### Auto-Retry Feature
+### Experiment Workflow
 
-Training now includes **automatic retry on errors** with checkpoint recovery:
+Each experiment automatically runs:
+1. **Training** (or loads existing weights if `skip_training: true`)
+2. **Inference** (standard, SAHI, or with ByteTrack)
+3. **Evaluation** (F2, mAP50, recall, precision, latency)
+4. **Results logging** to `outputs/metrics/results.csv`
 
-- **What it does:** If training crashes (tensor mismatches, MPS errors, OOM), it automatically:
-  1. Catches the error and logs it
-  2. Waits 10 seconds for system recovery
-  3. Resumes from the last checkpoint
-  4. Retries up to 5 times (configurable with `--max-retries`)
+### Available Experiments
 
-- **Benefits:**
-  - No need to manually restart training after crashes
-  - Protects against transient MPS backend errors
-  - Preserves training progress automatically
-
-- **What it won't retry:**
-  - User interrupts (Ctrl+C)
-  - Configuration errors (missing files)
+- **exp01_yolov5_baseline.yaml** - Historical baseline (2022 SOTA)
+- **exp02_yolov11_baseline.yaml** - Modern YOLOv11 baseline
+- **exp03_conf_sweep.yaml** - Confidence threshold sweep
+- **exp04_iou_sweep.yaml** - IoU threshold sweep
+- **exp05_resolution_scaling.yaml** - Resolution comparison (640 vs 1280)
+- **exp06_sahi_inference.yaml** - SAHI tiled inference
+- **exp07_bytetrack.yaml** - ByteTrack temporal tracking
+- **exp08_sahi_bytetrack.yaml** - Combined SAHI + ByteTrack
 
 ## Evaluation
 

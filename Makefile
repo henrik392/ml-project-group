@@ -1,22 +1,23 @@
-.PHONY: help data download prepare-yolo create-folds train resume train-all clean clean-runs clean-data
+.PHONY: help data download prepare-yolo create-folds exp-baseline exp-yolov5 exp-sahi exp-bytetrack clean clean-runs clean-data
 
 # Default target
 help:
 	@echo "Great Barrier Reef COTS Detection - Makefile"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make data          - Download and prepare all data (download + prepare-yolo + create-folds)"
-	@echo "  make download      - Download competition data from Kaggle"
-	@echo "  make prepare-yolo  - Convert data to YOLO format"
-	@echo "  make create-folds  - Create 3-fold CV splits by video_id"
+	@echo "  make data            - Download and prepare all data (download + prepare-yolo + create-folds)"
+	@echo "  make download        - Download competition data from Kaggle"
+	@echo "  make prepare-yolo    - Convert data to YOLO format"
+	@echo "  make create-folds    - Create 3-fold CV splits by video_id"
 	@echo ""
-	@echo "  make train         - Train fold 0 baseline (30 epochs, MPS)"
-	@echo "  make resume        - Resume training fold 0 from checkpoint"
-	@echo "  make train-all     - Train all 3 folds"
+	@echo "  make exp-baseline    - Run YOLOv11 baseline experiment (exp02)"
+	@echo "  make exp-yolov5      - Run YOLOv5 baseline experiment (exp01)"
+	@echo "  make exp-sahi        - Run SAHI inference experiment (exp06)"
+	@echo "  make exp-bytetrack   - Run ByteTrack experiment (exp07)"
 	@echo ""
-	@echo "  make clean         - Clean all generated files"
-	@echo "  make clean-runs    - Clean training runs only"
-	@echo "  make clean-data    - Clean processed data only"
+	@echo "  make clean           - Clean all generated files"
+	@echo "  make clean-runs      - Clean training runs only"
+	@echo "  make clean-data      - Clean processed data only"
 
 # Data pipeline
 data: download prepare-yolo create-folds
@@ -41,18 +42,22 @@ create-folds:
 	@echo "Creating 3-fold CV splits..."
 	@uv run src/data/create_folds.py
 
-# Training
-train:
-	@echo "Training fold 0 baseline (30 epochs, MPS)..."
-	@uv run src/training/train_baseline.py --fold 0 --epochs 30 --device mps
+# Experiments
+exp-baseline:
+	@echo "Running YOLOv11 baseline experiment..."
+	@uv run src/run_experiment.py --config configs/experiments/exp02_yolov11_baseline.yaml
 
-resume:
-	@echo "Resuming training fold 0 from checkpoint..."
-	@uv run src/training/train_baseline.py --fold 0 --epochs 30 --device mps --resume
+exp-yolov5:
+	@echo "Running YOLOv5 baseline experiment..."
+	@uv run src/run_experiment.py --config configs/experiments/exp01_yolov5_baseline.yaml
 
-train-all:
-	@echo "Training all 3 folds (30 epochs each, MPS)..."
-	@uv run src/training/train_baseline.py --epochs 30 --device mps
+exp-sahi:
+	@echo "Running SAHI inference experiment..."
+	@uv run src/run_experiment.py --config configs/experiments/exp06_sahi_inference.yaml
+
+exp-bytetrack:
+	@echo "Running ByteTrack experiment..."
+	@uv run src/run_experiment.py --config configs/experiments/exp07_bytetrack.yaml
 
 # Evaluation
 evaluate:
