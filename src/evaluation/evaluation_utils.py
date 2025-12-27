@@ -10,59 +10,13 @@ from pathlib import Path
 from src.evaluation.f2_score import calculate_f2_dataset
 
 
-def convert_yolo_results_to_boxes(results) -> pd.DataFrame:
+def convert_detections_to_boxes(results, has_tracking: bool = False) -> pd.DataFrame:
     """
-    Convert YOLO prediction results to boxes format for evaluation.
+    Convert detection results to boxes format for evaluation.
 
     Args:
-        results: YOLO prediction results (list of Results objects)
-
-    Returns:
-        DataFrame with columns ['image_id', 'boxes']
-        where boxes is list of dicts with keys: x, y, width, height, confidence
-    """
-    predictions = []
-
-    for result in results:
-        # Get image path
-        image_path = Path(result.path)
-        image_id = image_path.stem  # Filename without extension
-
-        # Extract boxes
-        boxes = []
-        if result.boxes is not None and len(result.boxes) > 0:
-            for box in result.boxes:
-                # Get box in xyxy format
-                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                conf = float(box.conf[0])
-
-                # Convert to COCO format (x, y, width, height)
-                boxes.append(
-                    {
-                        "x": int(x1),
-                        "y": int(y1),
-                        "width": int(x2 - x1),
-                        "height": int(y2 - y1),
-                        "confidence": conf,
-                    }
-                )
-
-        predictions.append(
-            {
-                "image_id": image_id,
-                "boxes": boxes,
-            }
-        )
-
-    return pd.DataFrame(predictions)
-
-
-def convert_sahi_results_to_boxes(results) -> pd.DataFrame:
-    """
-    Convert SAHI prediction results to boxes format for evaluation.
-
-    Args:
-        results: SAHI prediction results (list of PredictionResult objects)
+        results: List of detection results (YOLO Results, SAHI PredictionResult, or tracking dicts)
+        has_tracking: Whether results include tracking info (dict format)
 
     Returns:
         DataFrame with columns ['image_id', 'boxes']
@@ -70,60 +24,45 @@ def convert_sahi_results_to_boxes(results) -> pd.DataFrame:
     predictions = []
 
     for idx, result in enumerate(results):
-        # SAHI doesn't store image path, use index as ID
         image_id = f"frame_{idx}"
-
-        # Extract boxes from SAHI result
-        boxes = []
-        for obj_pred in result.object_prediction_list:
-            bbox = obj_pred.bbox
-            boxes.append(
-                {
-                    "x": int(bbox.minx),
-                    "y": int(bbox.miny),
-                    "width": int(bbox.maxx - bbox.minx),
-                    "height": int(bbox.maxy - bbox.miny),
-                    "confidence": obj_pred.score.value,
-                }
-            )
-
-        predictions.append(
-            {
-                "image_id": image_id,
-                "boxes": boxes,
-            }
-        )
-
-    return pd.DataFrame(predictions)
-
-
-def convert_sahi_tracking_results_to_boxes(results) -> pd.DataFrame:
-    """
-    Convert SAHI + tracking results to boxes format.
-
-    Args:
-        results: List of dicts with 'sahi_result' key
-
-    Returns:
-        DataFrame with columns ['image_id', 'boxes']
-    """
-    predictions = []
-
-    for frame_result in results:
-        image_id = f"frame_{frame_result['frame_idx']}"
         boxes = []
 
-        for obj_pred in frame_result["sahi_result"].object_prediction_list:
-            bbox = obj_pred.bbox
-            boxes.append(
-                {
-                    "x": int(bbox.minx),
-                    "y": int(bbox.miny),
-                    "width": int(bbox.maxx - bbox.minx),
-                    "height": int(bbox.maxy - bbox.miny),
-                    "confidence": obj_pred.score.value,
-                }
-            )
+        # Extract detection object
+        if has_tracking:
+            # Tracking dict: {'frame_idx', 'detections', 'tracks'}
+            det_result = result["detections"]
+        else:
+            det_result = result
+
+        # Check if SAHI or YOLO result
+        if hasattr(det_result, "object_prediction_list"):
+            # SAHI result
+            for obj_pred in det_result.object_prediction_list:
+                bbox = obj_pred.bbox
+                boxes.append(
+                    {
+                        "x": int(bbox.minx),
+                        "y": int(bbox.miny),
+                        "width": int(bbox.maxx - bbox.minx),
+                        "height": int(bbox.maxy - bbox.miny),
+                        "confidence": obj_pred.score.value,
+                    }
+                )
+        else:
+            # YOLO result
+            if det_result.boxes is not None and len(det_result.boxes) > 0:
+                for box in det_result.boxes:
+                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    conf = float(box.conf[0])
+                    boxes.append(
+                        {
+                            "x": int(x1),
+                            "y": int(y1),
+                            "width": int(x2 - x1),
+                            "height": int(y2 - y1),
+                            "confidence": conf,
+                        }
+                    )
 
         predictions.append({"image_id": image_id, "boxes": boxes})
 
@@ -238,21 +177,17 @@ def evaluate_from_config(
     """
     fold_id = config.get("fold_id", 0)
     eval_video_id = config.get("eval_video_id", f"video_{fold_id}")
-    inference_mode = config.get("inference", {}).get("mode", "standard")
     tracking_enabled = config.get("tracking", {}).get("enabled", False)
 
     print(f"\n{'=' * 80}")
     print(f"Evaluating on {eval_video_id}")
     print(f"{'=' * 80}\n")
 
-    # Convert predictions to DataFrame
+    # Convert predictions to DataFrame (works for all modes)
     pred_results = predictions["predictions"]
-    if inference_mode == "sahi" and tracking_enabled:
-        predictions_df = convert_sahi_tracking_results_to_boxes(pred_results)
-    elif inference_mode == "sahi":
-        predictions_df = convert_sahi_results_to_boxes(pred_results)
-    else:
-        predictions_df = convert_yolo_results_to_boxes(pred_results)
+    predictions_df = convert_detections_to_boxes(
+        pred_results, has_tracking=tracking_enabled
+    )
 
     # Load ground truth
     ground_truth_df = load_ground_truth(fold_id, eval_video_id)
