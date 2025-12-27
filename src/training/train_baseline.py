@@ -8,13 +8,8 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-from src.training.config import BaselineConfig
 from src.training.utils import (
     find_latest_checkpoint,
-    load_model_with_checkpoint,
-    print_training_header,
-    print_training_summary,
-    verify_dataset_config,
     with_retry,
 )
 
@@ -45,7 +40,9 @@ def train_from_config(
     """
     # Extract config values with defaults
     model_name = config.get("model", "yolov11n")
-    data_config = config.get("data", f"configs/dataset_fold_{config.get('fold_id', 0)}.yaml")
+    data_config = config.get(
+        "data", f"configs/dataset_fold_{config.get('fold_id', 0)}.yaml"
+    )
     fold_id = config.get("fold_id", 0)
     epochs = config.get("epochs", 50)
     imgsz = config.get("imgsz", 640)
@@ -54,29 +51,28 @@ def train_from_config(
     project = config.get("project", "runs/train")
     resume = config.get("resume", False)
 
-    # Extract model size from model name (yolov11n -> n)
-    model_size = model_name.split("v")[-1][0] if "yolo" in model_name else "n"
-
     # Print training header
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"Training {model_name} - Fold {fold_id}")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     print(f"Epochs: {epochs}, Image size: {imgsz}, Batch: {batch}, Device: {device}")
-    print(f"Auto-retry: Enabled (max 5 retries)")
-    print(f"{'='*80}\n")
+    print("Auto-retry: Enabled (max 5 retries)")
+    print(f"{'=' * 80}\n")
 
     # Verify dataset config exists
     if not Path(data_config).exists():
         raise FileNotFoundError(f"Dataset config not found: {data_config}")
 
     # Find checkpoint if resuming or retrying
-    run_name = f"{model_name.replace('yolo', 'yolo')}_fold{fold_id}"
+    run_name = f"{model_name}_fold{fold_id}"
     checkpoint_path = None
     if resume or _retry_count > 0:
         checkpoint_path = find_latest_checkpoint(project, run_name)
         if checkpoint_path:
             if _retry_count > 0:
-                print(f"\n[RETRY {_retry_count}/5] Resuming from checkpoint: {checkpoint_path}")
+                print(
+                    f"\n[RETRY {_retry_count}/5] Resuming from checkpoint: {checkpoint_path}"
+                )
             else:
                 print(f"Resuming from checkpoint: {checkpoint_path}")
         elif resume:
@@ -116,7 +112,7 @@ def train_from_config(
         train_kwargs["resume"] = True
 
     # Train
-    print(f"\nStarting training...")
+    print("\nStarting training...")
     results = model.train(**train_kwargs)
 
     # Get weights path
@@ -129,17 +125,17 @@ def train_from_config(
     }
 
     if hasattr(results, "results_dict"):
-        metrics.update({
-            "map50": results.results_dict.get("metrics/mAP50(B)", 0),
-            "map50_95": results.results_dict.get("metrics/mAP50-95(B)", 0),
-        })
+        metrics.update(
+            {
+                "map50": results.results_dict.get("metrics/mAP50(B)", 0),
+                "map50_95": results.results_dict.get("metrics/mAP50-95(B)", 0),
+            }
+        )
 
-    print(f"\n{'='*80}")
-    print(f"Training Complete")
+    print(f"\n{'=' * 80}")
+    print("Training Complete")
     print(f"Weights: {weights_path}")
     print(f"Save dir: {results.save_dir}")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     return metrics
-
-

@@ -24,7 +24,7 @@ from src.evaluation.evaluation_utils import evaluate_from_config
 
 def load_config(config_path: str) -> dict:
     """Load experiment configuration from YAML file."""
-    with open(config_path, 'r') as f:
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     return config
 
@@ -35,13 +35,13 @@ def run_training(config: dict) -> dict:
 
     Returns training artifacts (weights path, metrics, etc.)
     """
-    if config.get('skip_training', False):
+    if config.get("skip_training", False):
         print(f"[INFO] Skipping training for {config['experiment_id']}")
-        weights_path = config.get('weights', '')
+        weights_path = config.get("weights", "")
         if not Path(weights_path).exists():
             print(f"[WARNING] Weights not found: {weights_path}")
             print("[INFO] Please train the model first or provide correct weights path")
-        return {'weights': weights_path}
+        return {"weights": weights_path}
 
     print(f"[INFO] Training {config['model']} for {config.get('epochs', 50)} epochs...")
 
@@ -63,7 +63,7 @@ def run_inference(config: dict, weights_path: str) -> dict:
 
     Returns predictions and latency metrics.
     """
-    inference_mode = config.get('inference', {}).get('mode', 'standard')
+    inference_mode = config.get("inference", {}).get("mode", "standard")
     print(f"[INFO] Running {inference_mode} inference...")
 
     # Call inference function with config and weights
@@ -84,7 +84,7 @@ def run_evaluation(predictions: dict, config: dict) -> dict:
 
     Returns metrics dict.
     """
-    eval_video_id = config.get('eval_video_id', f"video_{config.get('fold_id', 0)}")
+    eval_video_id = config.get("eval_video_id", f"video_{config.get('fold_id', 0)}")
     print(f"[INFO] Evaluating on {eval_video_id}...")
 
     # Call evaluation function with predictions and config
@@ -93,7 +93,9 @@ def run_evaluation(predictions: dict, config: dict) -> dict:
     return metrics
 
 
-def save_results(metrics: dict, config: dict, output_path: str = "outputs/metrics/results.csv"):
+def save_results(
+    metrics: dict, config: dict, output_path: str = "outputs/metrics/results.csv"
+):
     """
     Append experiment results to CSV.
 
@@ -102,26 +104,30 @@ def save_results(metrics: dict, config: dict, output_path: str = "outputs/metric
     conf, iou, imgsz, f2, map50, recall, precision, ms_per_frame, seed, timestamp
     """
     # Extract values with defaults
-    inference_config = config.get('inference', {})
-    tracking_config = config.get('tracking', {})
+    inference_config = config.get("inference", {})
+    tracking_config = config.get("tracking", {})
 
     result = {
-        'experiment_id': config.get('experiment_id', 'unknown'),
-        'fold_id': config.get('fold_id', 0),
-        'eval_video_id': config.get('eval_video_id', f"video_{config.get('fold_id', 0)}"),
-        'model': config.get('model', 'yolov11n'),
-        'inference': inference_config.get('mode', 'standard'),
-        'tracking': tracking_config.get('tracker', 'bytetrack') if tracking_config.get('enabled', False) else 'none',
-        'conf': inference_config.get('conf', 0.25),
-        'iou': inference_config.get('iou', 0.45),
-        'imgsz': config.get('imgsz', 640),
-        'f2': metrics.get('f2', 0.0),
-        'map50': metrics.get('map50', 0.0),
-        'recall': metrics.get('recall', 0.0),
-        'precision': metrics.get('precision', 0.0),
-        'ms_per_frame': metrics.get('ms_per_frame', 0.0),
-        'seed': config.get('seed', 42),
-        'timestamp': datetime.now().isoformat()
+        "experiment_id": config.get("experiment_id", "unknown"),
+        "fold_id": config.get("fold_id", 0),
+        "eval_video_id": config.get(
+            "eval_video_id", f"video_{config.get('fold_id', 0)}"
+        ),
+        "model": config.get("model", "yolov11n"),
+        "inference": inference_config.get("mode", "standard"),
+        "tracking": tracking_config.get("tracker", "bytetrack")
+        if tracking_config.get("enabled", False)
+        else "none",
+        "conf": inference_config.get("conf", 0.25),
+        "iou": inference_config.get("iou", 0.45),
+        "imgsz": config.get("imgsz", 640),
+        "f2": metrics.get("f2", 0.0),
+        "map50": metrics.get("map50", 0.0),
+        "recall": metrics.get("recall", 0.0),
+        "precision": metrics.get("precision", 0.0),
+        "ms_per_frame": metrics.get("ms_per_frame", 0.0),
+        "seed": config.get("seed", 42),
+        "timestamp": datetime.now().isoformat(),
     }
 
     # Ensure output directory exists
@@ -131,28 +137,27 @@ def save_results(metrics: dict, config: dict, output_path: str = "outputs/metric
     # Append to CSV
     file_exists = output_file.exists()
 
-    with open(output_file, 'a', newline='') as f:
+    with open(output_file, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=result.keys())
         if not file_exists or output_file.stat().st_size == 0:
             writer.writeheader()
         writer.writerow(result)
 
     print(f"[SUCCESS] Results saved to {output_path}")
-    print(f"  F2: {result['f2']:.4f}, mAP50: {result['map50']:.4f}, Recall: {result['recall']:.4f}")
+    print(
+        f"  F2: {result['f2']:.4f}, mAP50: {result['map50']:.4f}, Recall: {result['recall']:.4f}"
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Run standardized experiment")
     parser.add_argument(
-        '--config',
-        type=str,
-        required=True,
-        help='Path to experiment config YAML'
+        "--config", type=str, required=True, help="Path to experiment config YAML"
     )
     parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Load config and print plan without executing'
+        "--dry-run",
+        action="store_true",
+        help="Load config and print plan without executing",
     )
     args = parser.parse_args()
 
@@ -160,13 +165,13 @@ def main():
     print(f"[INFO] Loading config: {args.config}")
     config = load_config(args.config)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Experiment: {config['experiment_id']}")
     print(f"Description: {config['description']}")
     print(f"Model: {config['model']}")
     print(f"Inference: {config['inference']['mode']}")
     print(f"Tracking: {'enabled' if config['tracking']['enabled'] else 'disabled'}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     if args.dry_run:
         print("[DRY RUN] Skipping execution")
@@ -177,7 +182,7 @@ def main():
 
     # 1. Training (or load existing weights)
     training_results = run_training(config)
-    weights_path = training_results['weights']
+    weights_path = training_results["weights"]
 
     # 2. Inference
     predictions = run_inference(config, weights_path)

@@ -37,18 +37,22 @@ def convert_yolo_results_to_boxes(results) -> pd.DataFrame:
                 conf = float(box.conf[0])
 
                 # Convert to COCO format (x, y, width, height)
-                boxes.append({
-                    "x": int(x1),
-                    "y": int(y1),
-                    "width": int(x2 - x1),
-                    "height": int(y2 - y1),
-                    "confidence": conf,
-                })
+                boxes.append(
+                    {
+                        "x": int(x1),
+                        "y": int(y1),
+                        "width": int(x2 - x1),
+                        "height": int(y2 - y1),
+                        "confidence": conf,
+                    }
+                )
 
-        predictions.append({
-            "image_id": image_id,
-            "boxes": boxes,
-        })
+        predictions.append(
+            {
+                "image_id": image_id,
+                "boxes": boxes,
+            }
+        )
 
     return pd.DataFrame(predictions)
 
@@ -73,18 +77,22 @@ def convert_sahi_results_to_boxes(results) -> pd.DataFrame:
         boxes = []
         for obj_pred in result.object_prediction_list:
             bbox = obj_pred.bbox
-            boxes.append({
-                "x": int(bbox.minx),
-                "y": int(bbox.miny),
-                "width": int(bbox.maxx - bbox.minx),
-                "height": int(bbox.maxy - bbox.miny),
-                "confidence": obj_pred.score.value,
-            })
+            boxes.append(
+                {
+                    "x": int(bbox.minx),
+                    "y": int(bbox.miny),
+                    "width": int(bbox.maxx - bbox.minx),
+                    "height": int(bbox.maxy - bbox.miny),
+                    "confidence": obj_pred.score.value,
+                }
+            )
 
-        predictions.append({
-            "image_id": image_id,
-            "boxes": boxes,
-        })
+        predictions.append(
+            {
+                "image_id": image_id,
+                "boxes": boxes,
+            }
+        )
 
     return pd.DataFrame(predictions)
 
@@ -125,19 +133,23 @@ def load_ground_truth(fold_id: int, eval_video_id: str) -> pd.DataFrame:
                     # Each detection: conf x y width height (5 values)
                     for i in range(0, len(parts), 5):
                         if i + 4 < len(parts):
-                            boxes.append({
-                                "x": int(float(parts[i + 1])),
-                                "y": int(float(parts[i + 2])),
-                                "width": int(float(parts[i + 3])),
-                                "height": int(float(parts[i + 4])),
-                            })
+                            boxes.append(
+                                {
+                                    "x": int(float(parts[i + 1])),
+                                    "y": int(float(parts[i + 2])),
+                                    "width": int(float(parts[i + 3])),
+                                    "height": int(float(parts[i + 4])),
+                                }
+                            )
 
         # Use frame number as image_id
         frame = image_id.split("-")[1]
-        ground_truth.append({
-            "image_id": frame,
-            "boxes": boxes,
-        })
+        ground_truth.append(
+            {
+                "image_id": frame,
+                "boxes": boxes,
+            }
+        )
 
     return pd.DataFrame(ground_truth)
 
@@ -195,9 +207,9 @@ def evaluate_from_config(
     eval_video_id = config.get("eval_video_id", f"video_{fold_id}")
     inference_mode = config.get("inference", {}).get("mode", "standard")
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"Evaluating on {eval_video_id}")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     # Convert predictions to DataFrame
     pred_results = predictions["predictions"]

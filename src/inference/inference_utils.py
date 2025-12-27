@@ -137,7 +137,7 @@ def run_sahi_inference(
         results.append(result)
 
         if verbose:
-            print(f"Processed {image_path.name} in {elapsed*1000:.1f}ms")
+            print(f"Processed {image_path.name} in {elapsed * 1000:.1f}ms")
 
     # Calculate average latency
     num_images = len(results)
@@ -241,10 +241,10 @@ def run_inference_from_config(
     eval_video_id = config.get("eval_video_id", f"video_{fold_id}")
     source = f"data/train_images/{eval_video_id}"
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"Running {mode} inference on {eval_video_id}")
     print(f"conf={conf}, iou={iou}, imgsz={imgsz}")
-    print(f"{'='*80}\n")
+    print(f"{'=' * 80}\n")
 
     # Run inference based on mode
     if mode == "sahi":
@@ -261,7 +261,9 @@ def run_inference_from_config(
             overlap_width_ratio=sahi_config.get("overlap_width_ratio", 0.2),
             postprocess_type=sahi_config.get("postprocess_type", "NMS"),
             postprocess_match_metric=sahi_config.get("postprocess_match_metric", "IOS"),
-            postprocess_match_threshold=sahi_config.get("postprocess_match_threshold", 0.5),
+            postprocess_match_threshold=sahi_config.get(
+                "postprocess_match_threshold", 0.5
+            ),
             device="cpu" if device == "mps" else device,
             verbose=True,
         )
