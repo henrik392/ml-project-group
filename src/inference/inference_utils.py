@@ -15,9 +15,6 @@ import numpy as np
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 from ultralytics import YOLO
-from ultralytics.trackers.track import TRACKER_MAP
-from ultralytics.utils import IterableSimpleNamespace, YAML
-from ultralytics.utils.checks import check_yaml
 
 
 def load_frames(source: str) -> list:
@@ -138,6 +135,10 @@ def run_inference(
     # Initialize tracker (optional)
     tracker = None
     if use_tracking:
+        from ultralytics.trackers.track import TRACKER_MAP
+        from ultralytics.utils import IterableSimpleNamespace, YAML
+        from ultralytics.utils.checks import check_yaml
+
         cfg = IterableSimpleNamespace(**YAML.load(check_yaml(f"{tracker_name}.yaml")))
         tracker = TRACKER_MAP[cfg.tracker_type](args=cfg, frame_rate=30)
         if verbose:
@@ -195,63 +196,3 @@ def run_inference(
 
     ms_per_frame = (total_time / len(frames)) * 1000 if frames else 0
     return results, ms_per_frame
-
-
-def run_inference_from_config(config: dict, weights_path: str) -> dict:
-    """
-    Run inference based on experiment config.
-
-    Args:
-        config: Experiment config with inference settings
-        weights_path: Path to model weights
-
-    Returns:
-        Dict with predictions and latency metrics
-    """
-    inference_config = config.get("inference", {})
-    tracking_config = config.get("tracking", {})
-
-    mode = inference_config.get("mode", "standard")
-    conf = inference_config.get("conf", 0.25)
-    iou = inference_config.get("iou", 0.45)
-    imgsz = config.get("imgsz", 640)
-    device = config.get("device", "mps")
-
-    # Determine source
-    fold_id = config.get("fold_id", 0)
-    eval_video_id = config.get("eval_video_id", f"video_{fold_id}")
-    source = f"data/train_images/{eval_video_id}"
-
-    # Setup flags
-    use_sahi = mode == "sahi"
-    use_tracking = tracking_config.get("enabled", False)
-
-    print(f"\n{'=' * 80}")
-    print(f"Running inference on {eval_video_id}")
-    print(f"Mode: {'SAHI' if use_sahi else 'Standard'}", end="")
-    print(" + ByteTrack" if use_tracking else "")
-    print(f"conf={conf}, iou={iou}, imgsz={imgsz}")
-    print(f"{'=' * 80}\n")
-
-    # Run unified pipeline
-    results, ms_per_frame = run_inference(
-        model_path=weights_path,
-        source=source,
-        use_sahi=use_sahi,
-        use_tracking=use_tracking,
-        conf=conf,
-        iou=iou,
-        imgsz=imgsz,
-        sahi_config=inference_config.get("sahi"),
-        tracker_name=tracking_config.get("tracker", "bytetrack"),
-        device="cpu" if device == "mps" else device,
-        verbose=True,
-    )
-
-    print(f"\nInference complete: {ms_per_frame:.2f} ms/frame")
-
-    return {
-        "predictions": results,
-        "ms_per_frame": ms_per_frame,
-        "num_images": len(results),
-    }

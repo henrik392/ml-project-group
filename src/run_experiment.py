@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from src.training.train_baseline import train_from_config
-from src.inference.inference_utils import run_inference_from_config
+from src.inference.inference_utils import run_inference
 from src.evaluation.evaluation_utils import evaluate_from_config
 
 
@@ -51,25 +51,59 @@ def run_training(config: dict) -> dict:
     return results
 
 
-def run_inference(config: dict, weights_path: str) -> dict:
+def run_inference_wrapper(config: dict, weights_path: str) -> dict:
     """
     Run inference based on config.
 
     Supports:
     - Standard inference
     - SAHI tiled inference
-    - Confidence/IoU threshold sweeps
     - ByteTrack tracking
 
     Returns predictions and latency metrics.
     """
-    inference_mode = config.get("inference", {}).get("mode", "standard")
-    print(f"[INFO] Running {inference_mode} inference...")
+    inference_config = config.get("inference", {})
+    tracking_config = config.get("tracking", {})
 
-    # Call inference function with config and weights
-    predictions = run_inference_from_config(config, weights_path)
+    # Extract parameters
+    mode = inference_config.get("mode", "standard")
+    conf = inference_config.get("conf", 0.25)
+    iou = inference_config.get("iou", 0.45)
+    imgsz = config.get("imgsz", 640)
+    device = config.get("device", "mps")
 
-    return predictions
+    # Determine source
+    fold_id = config.get("fold_id", 0)
+    eval_video_id = config.get("eval_video_id", f"video_{fold_id}")
+    source = f"data/train_images/{eval_video_id}"
+
+    # Setup flags
+    use_sahi = mode == "sahi"
+    use_tracking = tracking_config.get("enabled", False)
+
+    print(f"[INFO] Running {'SAHI' if use_sahi else 'Standard'}", end="")
+    print(" + ByteTrack" if use_tracking else "", "inference...")
+
+    # Run unified pipeline
+    results, ms_per_frame = run_inference(
+        model_path=weights_path,
+        source=source,
+        use_sahi=use_sahi,
+        use_tracking=use_tracking,
+        conf=conf,
+        iou=iou,
+        imgsz=imgsz,
+        sahi_config=inference_config.get("sahi"),
+        tracker_name=tracking_config.get("tracker", "bytetrack"),
+        device="cpu" if device == "mps" else device,
+        verbose=True,
+    )
+
+    return {
+        "predictions": results,
+        "ms_per_frame": ms_per_frame,
+        "num_images": len(results),
+    }
 
 
 def run_evaluation(predictions: dict, config: dict) -> dict:
@@ -185,7 +219,7 @@ def main():
     weights_path = training_results["weights"]
 
     # 2. Inference
-    predictions = run_inference(config, weights_path)
+    predictions = run_inference_wrapper(config, weights_path)
 
     # 3. Evaluation
     metrics = run_evaluation(predictions, config)
