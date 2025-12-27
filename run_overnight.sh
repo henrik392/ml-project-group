@@ -54,10 +54,10 @@ overall_start=$(date +%s)
 EXPERIMENTS=(
     "configs/experiments/exp01_yolov5_baseline.yaml"
     "configs/experiments/exp02_yolov11_baseline.yaml"
+    "configs/experiments/exp05_resolution_scaling.yaml"
     # Add more experiments here as needed:
     # "configs/experiments/exp03_conf_sweep.yaml"
     # "configs/experiments/exp04_iou_sweep.yaml"
-    # "configs/experiments/exp05_resolution_scaling.yaml"
     # "configs/experiments/exp06_sahi_inference.yaml"
     # "configs/experiments/exp07_bytetrack.yaml"
     # "configs/experiments/exp08_sahi_bytetrack.yaml"
