@@ -77,21 +77,14 @@ def to_tracker_format(detections, detection_type: str) -> np.ndarray:
     )
 
 
-def run_inference(
-    model_path: str,
-    source: str,
-    use_sahi: bool = False,
-    use_tracking: bool = False,
-    conf: float = 0.25,
-    iou: float = 0.45,
-    imgsz: int = 640,
-    sahi_config: dict = None,
-    tracker_name: str = "bytetrack",
-    device: str = "cpu",
-    verbose: bool = False,
-) -> tuple[list, float]:
+def run_inference(config: dict, weights_path: str) -> dict:
     """
-    Unified inference pipeline with optional SAHI and tracking.
+    Unified inference pipeline from experiment config.
+
+    Supports:
+    - Standard inference
+    - SAHI tiled inference
+    - ByteTrack tracking
 
     Pipeline:
     1. Load frames from source
@@ -100,21 +93,37 @@ def run_inference(
     4. Return results + latency
 
     Args:
-        model_path: Path to model weights
-        source: Video path or image directory
-        use_sahi: Use SAHI tiled inference
-        use_tracking: Use ByteTrack tracking
-        conf: Confidence threshold
-        iou: IoU threshold (YOLO only)
-        imgsz: Image size (YOLO only)
-        sahi_config: SAHI configuration dict
-        tracker_name: Tracker name ('bytetrack' or 'botsort')
-        device: Device ('cpu', 'cuda:0', 'mps')
-        verbose: Print progress
+        config: Experiment config with inference settings
+        weights_path: Path to model weights
 
     Returns:
-        Tuple of (results list, ms per frame)
+        Dict with 'predictions', 'ms_per_frame', 'num_images'
     """
+    # Extract config values
+    inference_config = config.get("inference", {})
+    tracking_config = config.get("tracking", {})
+
+    mode = inference_config.get("mode", "standard")
+    conf = inference_config.get("conf", 0.25)
+    iou = inference_config.get("iou", 0.45)
+    imgsz = config.get("imgsz", 640)
+    device = config.get("device", "mps")
+
+    # Determine source
+    fold_id = config.get("fold_id", 0)
+    eval_video_id = config.get("eval_video_id", f"video_{fold_id}")
+    source = f"data/train_images/{eval_video_id}"
+
+    # Setup flags
+    use_sahi = mode == "sahi"
+    use_tracking = tracking_config.get("enabled", False)
+    sahi_config = inference_config.get("sahi")
+    tracker_name = tracking_config.get("tracker", "bytetrack")
+    verbose = True
+
+    print(f"[INFO] Running {'SAHI' if use_sahi else 'Standard'}", end="")
+    print(" + ByteTrack" if use_tracking else "", "inference...")
+
     # Load frames
     frames = load_frames(source)
     if verbose:
@@ -124,13 +133,13 @@ def run_inference(
     if use_sahi:
         detector = AutoDetectionModel.from_pretrained(
             model_type="ultralytics",
-            model_path=model_path,
+            model_path=weights_path,
             confidence_threshold=conf,
             device=device,
         )
         sahi_cfg = sahi_config or {}
     else:
-        detector = YOLO(model_path)
+        detector = YOLO(weights_path)
 
     # Initialize tracker (optional)
     tracker = None
@@ -195,4 +204,8 @@ def run_inference(
             print(f"Processed {idx + 1}/{len(frames)} frames ({elapsed * 1000:.1f}ms)")
 
     ms_per_frame = (total_time / len(frames)) * 1000 if frames else 0
-    return results, ms_per_frame
+    return {
+        "predictions": results,
+        "ms_per_frame": ms_per_frame,
+        "num_images": len(results),
+    }
