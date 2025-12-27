@@ -1,0 +1,56 @@
+# Experiment 2: YOLOv11n Modern Baseline
+# Purpose: Establish modern baseline with YOLOv11 defaults
+
+experiment_id: exp02_yolov11
+description: "Modern baseline (YOLOv11n) with default hyperparameters"
+
+# Model configuration
+model: yolov11n  # YOLOv11 nano
+weights: null    # Train from scratch
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters
+epochs: 30
+imgsz: 640
+batch: 16
+device: mps
+patience: 5
+seed: 42
+
+# Hyperparameters (keep defaults)
+hyperparameters:
+  box: 7.5   # Default - ablation study proved optimal
+  cls: 0.5   # Default
+  dfl: 1.5   # Default
+
+# Augmentation (keep defaults)
+augmentation:
+  hsv_h: 0.015  # CRITICAL - ablation study showed -34.3% without
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0  # Disabled - hurts performance (-12.7%)
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0    # Neutral, can enable for longer runs
+
+# Inference configuration
+inference:
+  mode: standard
+  conf: 0.25
+  iou: 0.45
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  Modern baseline using YOLOv11n with default hyperparameters.
+  Ablation study validated that defaults are optimal.
+  Focus: Establish strong baseline before scaling resolution/model.

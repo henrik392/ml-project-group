@@ -1,0 +1,36 @@
+# Experiment 3: Confidence Threshold Sweep
+# Purpose: Find optimal conf threshold for F2 metric (recall-weighted)
+
+experiment_id: exp03_conf_sweep
+description: "Confidence threshold ablation for F2 optimization"
+
+# Model configuration (use trained baseline)
+model: yolov11n
+weights: runs/train/yolo11n_fold0/weights/best.pt  # From exp02
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters (inference only, no training)
+skip_training: true
+
+# Inference configuration (sweep)
+inference:
+  mode: standard
+  conf_sweep: [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]  # Lower = more recall
+  iou: 0.45
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  Sweep confidence thresholds to optimize F2 score.
+  F2 weighs recall 5× more than precision, so lower thresholds expected to win.
+  Use frozen weights from exp02 baseline.
+  Goal: Find optimal threshold for maximum F2.

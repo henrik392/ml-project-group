@@ -1,0 +1,36 @@
+# Experiment 4: NMS IoU Threshold Sweep
+# Purpose: Find optimal NMS IoU threshold
+
+experiment_id: exp04_iou_sweep
+description: "NMS IoU threshold ablation"
+
+# Model configuration (use trained baseline)
+model: yolov11n
+weights: runs/train/yolo11n_fold0/weights/best.pt  # From exp02
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters (inference only)
+skip_training: true
+
+# Inference configuration (sweep)
+inference:
+  mode: standard
+  conf: 0.25  # Use default (or optimal from exp03)
+  iou_sweep: [0.3, 0.45, 0.5, 0.6, 0.7]  # NMS IoU thresholds
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  Sweep NMS IoU thresholds.
+  Lower IoU = more aggressive NMS (fewer duplicate boxes).
+  2022 winner used iou=0.3 (vs YOLOv11 default 0.45).
+  Test if lower IoU helps with small, clustered objects.

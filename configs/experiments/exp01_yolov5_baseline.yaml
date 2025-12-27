@@ -1,0 +1,40 @@
+# Experiment 1: YOLOv5n Historical Baseline
+# Purpose: Establish 2022 SOTA baseline for comparison
+
+experiment_id: exp01_yolov5
+description: "Historical baseline (YOLOv5n) - 2022 competition SOTA"
+
+# Model configuration
+model: yolov5n  # YOLOv5 nano
+weights: null   # Train from scratch (or specify pretrained)
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters
+epochs: 30
+imgsz: 640
+batch: 16
+device: mps
+patience: 5
+seed: 42
+
+# Inference configuration
+inference:
+  mode: standard  # standard | sahi
+  conf: 0.25      # Confidence threshold
+  iou: 0.45       # NMS IoU threshold
+
+# Tracking
+tracking:
+  enabled: false  # none | bytetrack
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  Historical baseline using YOLOv5n to compare against modern YOLOv11.
+  Same dataset split, same evaluation protocol.
+  Expected to be outperformed by YOLOv11 due to architectural improvements.

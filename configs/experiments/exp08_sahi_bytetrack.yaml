@@ -1,0 +1,55 @@
+# Experiment 8: SAHI + ByteTrack Combined
+# Purpose: Combine best methods for maximum F2 score
+
+experiment_id: exp08_sahi_bytetrack
+description: "Combined SAHI tiled inference + ByteTrack temporal context"
+
+# Model configuration (use trained baseline)
+model: yolov11n
+weights: runs/train/yolo11n_fold0/weights/best.pt  # From exp02
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters (inference only)
+skip_training: true
+
+# Inference configuration
+inference:
+  mode: sahi
+  conf: 0.25  # Or optimal from exp03
+  iou: 0.45   # Or optimal from exp04
+
+  # SAHI-specific settings
+  sahi:
+    slice_height: 640
+    slice_width: 640
+    overlap_height_ratio: 0.2
+    overlap_width_ratio: 0.2
+    postprocess_type: NMS
+    postprocess_match_metric: IOS
+    postprocess_match_threshold: 0.5
+
+# Tracking
+tracking:
+  enabled: true
+  tracker: bytetrack
+
+  # ByteTrack parameters
+  track_high_thresh: 0.5
+  track_low_thresh: 0.1
+  new_track_thresh: 0.6
+  track_buffer: 30
+  match_thresh: 0.8
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  Combine SAHI (small object detection) + ByteTrack (temporal context).
+  Expected: Best F2 score from combining both techniques.
+  Trade-off: Slowest inference (2-6× slower than baseline).
+  Use for final, highest-quality predictions.
+  Compare against individual methods (exp06, exp07).

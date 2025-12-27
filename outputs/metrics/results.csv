@@ -1,0 +1,1 @@
+experiment_id,fold_id,eval_video_id,model,inference,tracking,conf,iou,imgsz,f2,map50,recall,precision,ms_per_frame,seed,timestamp

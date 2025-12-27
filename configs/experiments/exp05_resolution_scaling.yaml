@@ -1,0 +1,58 @@
+# Experiment 5: Image Resolution Scaling
+# Purpose: Test higher resolution for small object detection (highest expected ROI)
+
+experiment_id: exp05_resolution_1280
+description: "Resolution scaling (640 → 1280) for small object improvement"
+
+# Model configuration
+model: yolov11n
+weights: null  # Train from scratch at new resolution
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters
+epochs: 30
+imgsz: 1280  # 4× pixels vs baseline (640)
+batch: 4     # Reduced due to 4× memory requirement
+device: mps
+patience: 5
+seed: 42
+
+# Hyperparameters (keep defaults)
+hyperparameters:
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+
+# Augmentation (keep defaults)
+augmentation:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0
+
+# Inference configuration
+inference:
+  mode: standard
+  conf: 0.25
+  iou: 0.45
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  HIGHEST EXPECTED ROI for small object detection.
+  1280px provides 4× more pixels per starfish.
+  Expected: +20-40% recall improvement.
+  Trade-off: 4× memory, ~3-4× slower training.
+  Batch size reduced to 4 to fit in memory.
