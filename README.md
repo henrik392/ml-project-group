@@ -56,7 +56,7 @@ This project follows a clear narrative arc for the final report:
 make data
 
 # 2. Run an experiment
-uv run src/run_experiment.py --config configs/experiments/exp02_yolov11_baseline.yaml
+uv run python -m src.run_experiment --config configs/experiments/exp02_yolov11_baseline.yaml
 # Or use shortcuts: make exp-baseline
 
 # 3. View all results
@@ -101,10 +101,10 @@ All experiments use standardized YAML configs in `configs/experiments/`. The run
 
 ```bash
 # Run a single experiment
-uv run src/run_experiment.py --config configs/experiments/exp02_yolov11_baseline.yaml
+uv run python -m src.run_experiment --config configs/experiments/exp02_yolov11_baseline.yaml
 
 # Preview experiment without executing
-uv run src/run_experiment.py --config configs/experiments/exp01_yolov5_baseline.yaml --dry-run
+uv run python -m src.run_experiment --config configs/experiments/exp01_yolov5_baseline.yaml --dry-run
 
 # Quick shortcuts via Makefile
 make exp-baseline    # YOLOv11 baseline
@@ -131,6 +131,30 @@ Each experiment automatically runs:
 - **exp06_sahi_inference.yaml** - SAHI tiled inference
 - **exp07_bytetrack.yaml** - ByteTrack temporal tracking
 - **exp08_sahi_bytetrack.yaml** - Combined SAHI + ByteTrack
+
+### Running Multiple Experiments Overnight
+
+For batch processing multiple experiments:
+
+```bash
+# Option 1: Use the overnight script
+./run_overnight.sh
+
+# Option 2: Use Makefile shortcut
+make overnight
+```
+
+**To configure which experiments run:**
+1. Edit `run_overnight.sh`
+2. Modify the `EXPERIMENTS` array to include the experiments you want
+3. Logs are saved to `logs/overnight_TIMESTAMP/`
+
+The script will:
+- Run experiments sequentially
+- Log each experiment to a separate file
+- Show progress with timestamps
+- Continue on failures (optional)
+- Display total runtime at the end
 
 ## Evaluation
 

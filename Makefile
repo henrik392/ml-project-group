@@ -1,4 +1,4 @@
-.PHONY: help data download prepare-yolo create-folds exp-baseline exp-yolov5 exp-sahi exp-bytetrack clean clean-runs clean-data
+.PHONY: help data download prepare-yolo create-folds exp-baseline exp-yolov5 exp-sahi exp-bytetrack overnight clean clean-runs clean-data
 
 # Default target
 help:
@@ -14,6 +14,7 @@ help:
 	@echo "  make exp-yolov5      - Run YOLOv5 baseline experiment (exp01)"
 	@echo "  make exp-sahi        - Run SAHI inference experiment (exp06)"
 	@echo "  make exp-bytetrack   - Run ByteTrack experiment (exp07)"
+	@echo "  make overnight       - Run multiple experiments sequentially (edit run_overnight.sh)"
 	@echo ""
 	@echo "  make clean           - Clean all generated files"
 	@echo "  make clean-runs      - Clean training runs only"
@@ -45,19 +46,24 @@ create-folds:
 # Experiments
 exp-baseline:
 	@echo "Running YOLOv11 baseline experiment..."
-	@uv run src/run_experiment.py --config configs/experiments/exp02_yolov11_baseline.yaml
+	@uv run python -m src.run_experiment --config configs/experiments/exp02_yolov11_baseline.yaml
 
 exp-yolov5:
 	@echo "Running YOLOv5 baseline experiment..."
-	@uv run src/run_experiment.py --config configs/experiments/exp01_yolov5_baseline.yaml
+	@uv run python -m src.run_experiment --config configs/experiments/exp01_yolov5_baseline.yaml
 
 exp-sahi:
 	@echo "Running SAHI inference experiment..."
-	@uv run src/run_experiment.py --config configs/experiments/exp06_sahi_inference.yaml
+	@uv run python -m src.run_experiment --config configs/experiments/exp06_sahi_inference.yaml
 
 exp-bytetrack:
 	@echo "Running ByteTrack experiment..."
-	@uv run src/run_experiment.py --config configs/experiments/exp07_bytetrack.yaml
+	@uv run python -m src.run_experiment --config configs/experiments/exp07_bytetrack.yaml
+
+# Overnight batch processing
+overnight:
+	@echo "Running overnight experiments (see run_overnight.sh for configuration)..."
+	@./run_overnight.sh
 
 # Evaluation
 evaluate:
