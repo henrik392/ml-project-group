@@ -97,6 +97,39 @@ def convert_sahi_results_to_boxes(results) -> pd.DataFrame:
     return pd.DataFrame(predictions)
 
 
+def convert_sahi_tracking_results_to_boxes(results) -> pd.DataFrame:
+    """
+    Convert SAHI + tracking results to boxes format.
+
+    Args:
+        results: List of dicts with 'sahi_result' key
+
+    Returns:
+        DataFrame with columns ['image_id', 'boxes']
+    """
+    predictions = []
+
+    for frame_result in results:
+        image_id = f"frame_{frame_result['frame_idx']}"
+        boxes = []
+
+        for obj_pred in frame_result["sahi_result"].object_prediction_list:
+            bbox = obj_pred.bbox
+            boxes.append(
+                {
+                    "x": int(bbox.minx),
+                    "y": int(bbox.miny),
+                    "width": int(bbox.maxx - bbox.minx),
+                    "height": int(bbox.maxy - bbox.miny),
+                    "confidence": obj_pred.score.value,
+                }
+            )
+
+        predictions.append({"image_id": image_id, "boxes": boxes})
+
+    return pd.DataFrame(predictions)
+
+
 def load_ground_truth(fold_id: int, eval_video_id: str) -> pd.DataFrame:
     """
     Load ground truth annotations for evaluation.
@@ -206,6 +239,7 @@ def evaluate_from_config(
     fold_id = config.get("fold_id", 0)
     eval_video_id = config.get("eval_video_id", f"video_{fold_id}")
     inference_mode = config.get("inference", {}).get("mode", "standard")
+    tracking_enabled = config.get("tracking", {}).get("enabled", False)
 
     print(f"\n{'=' * 80}")
     print(f"Evaluating on {eval_video_id}")
@@ -213,7 +247,9 @@ def evaluate_from_config(
 
     # Convert predictions to DataFrame
     pred_results = predictions["predictions"]
-    if inference_mode == "sahi":
+    if inference_mode == "sahi" and tracking_enabled:
+        predictions_df = convert_sahi_tracking_results_to_boxes(pred_results)
+    elif inference_mode == "sahi":
         predictions_df = convert_sahi_results_to_boxes(pred_results)
     else:
         predictions_df = convert_yolo_results_to_boxes(pred_results)
