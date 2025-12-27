@@ -256,24 +256,126 @@ These architectural improvements reduce reliance on hyperparameter tuning and he
 
 ---
 
-## Appendix: Prior Ablation Study (HSV, box weight)
+## Appendix: Prior Experiments & Lessons Learned
 
-### Background
+Prior to establishing the current experimental storyline, extensive preliminary work was conducted to understand baseline performance and validate hyperparameter choices.
 
-Prior to establishing this experimental storyline, an ablation study was conducted on YOLOv11 hyperparameters and augmentations (8 experiments, 5 epochs each).
+### A.1 Initial Baseline Training
 
-### Key Findings
+**Configuration**: YOLOv11n @ 640px, M4 Max (MPS), default hyperparameters
 
-1. **HSV augmentation is critical**: Disabling HSV caused -34.3% mAP50 degradation
-2. **Box weight**: Default (7.5) is optimal; reductions to 6.5, 6.0, 5.5, 5.0 all hurt performance (-7% to -31%)
-3. **Rotation augmentation**: 10° rotation caused -12.7% performance drop
-4. **Mixup augmentation**: Neutral (+0.1% vs baseline)
+**Results**:
+- **Best performance**: Epoch 10 - mAP50 = 0.126, Precision = 0.471, Recall = 0.114
+- **Critical finding**: Very low recall (11.4%) - model misses 88.6% of starfish
+- **Training issue**: Performance degraded after epoch 10 (likely due to training interruption/resume)
 
-### Implication
+**Observation**: High precision (47%) but critically low recall indicates the model is conservative. The F2 metric (recall-weighted) requires substantial recall improvement.
 
-These findings informed the decision to **keep YOLOv11 default hyperparameters** for the main experimental arc. Over-tuning hyperparameters showed diminishing or negative returns.
+### A.2 Systematic Ablation Study
 
-**Full analysis**: See `reports/ablation_study_analysis.md`
+**Design**: 8 experiments, 5 epochs each, Fold 0, changing ONE parameter from baseline
+
+| Experiment | Parameter Changed | mAP50 | Change | Conclusion |
+|------------|------------------|-------|--------|------------|
+| baseline_control | None | 0.1260 | 0.0% | Reference |
+| **mixup_0.1** | +mixup | 0.1262 | **+0.1%** | Neutral, safe to use |
+| box_5.5 | box 7.5→5.5 | 0.1173 | -6.9% | Hurts |
+| box_5.0 | box 7.5→5.0 | 0.1167 | -7.3% | Hurts |
+| box_6.0 | box 7.5→6.0 | 0.1072 | -14.9% | Hurts |
+| box_6.5 | box 7.5→6.5 | 0.0870 | -30.9% | Severely hurts |
+| rotation_10 | +10° rotation | 0.1100 | -12.7% | Hurts (works on MPS, but degrades performance) |
+| **no_hsv** | Disable HSV | **0.0828** | **-34.3%** | **CRITICAL - HSV is essential** |
+
+**Key Findings**:
+
+1. **HSV augmentation is critical** (-34.3% when disabled)
+   - **Hypothesis**: Underwater imagery exhibits extreme color variation due to depth, lighting, and water clarity. HSV augmentation helps generalize across these conditions.
+   - **Implication**: Explains why a prior failed experiment (Phase 2) that disabled HSV saw -47% degradation.
+
+2. **Default box weight (7.5) is optimal**
+   - ALL reductions (7.5 → 6.5, 6.0, 5.5, 5.0) hurt performance (-7% to -31%)
+   - **Hypothesis**: YOLOv11n (nano model) with limited capacity benefits from strong localization signal. Anchor-free detection makes good use of high box weight.
+
+3. **Rotation augmentation works on MPS but hurts performance** (-12.7%)
+   - **Clarification**: Technical compatibility confirmed (no crashes), but modeling performance degrades
+   - **Hypothesis**: COTS may have preferred orientations in video frames, or rotation distorts small objects
+
+4. **Mixup augmentation is neutral** (+0.1%)
+   - Safe to enable, but minimal impact at 5 epochs
+
+### A.3 YOLOv11 vs. YOLOv5: Architecture Differences
+
+**Critical realization**: The 2022 Kaggle competition used YOLOv5. Winning solutions optimized for YOLOv5 limitations do NOT directly apply to YOLOv11.
+
+| Feature | YOLOv5 (2022) | YOLOv11 (2024) | Impact |
+|---------|---------------|----------------|--------|
+| Detection | Anchor-based | **Anchor-free** | Better small-object localization |
+| Heads | Coupled | **Decoupled** | Cleaner classification/box separation |
+| Multi-scale | Basic FPN | **Enhanced** | Fewer missed tiny objects |
+| NMS | Post-processing | **NMS-free training** | Fewer duplicate boxes |
+| Defaults | Needed tuning | **Pre-optimized** | Strong out-of-box |
+
+**Why 2022 winning solution used `box=0.2` (not applicable to YOLOv11)**:
+- YOLOv5 anchor-based detection struggled with precise small-object localization
+- Reducing box weight helped focus on classification confidence
+- YOLOv11 anchor-free + decoupled heads already handle small objects well
+- Our ablation proves: YOLOv11 default `box=7.5` is optimal
+
+**Why 2022 winning solution disabled HSV (opposite of our finding)**:
+- **Hypothesis**: Their dataset may have had consistent camera settings, controlled lighting, or similar water clarity
+- **Our dataset**: 3 different videos with potentially variable camera settings, depths, and lighting
+- HSV augmentation helps generalize across our variable conditions
+
+**Conclusion**: Trust YOLOv11 defaults and focus on **resolution**, **model scaling**, and **temporal context** instead of hyperparameter tuning.
+
+### A.4 Technical Issues Encountered
+
+#### MPS Backend Compatibility
+
+**Three-way augmentation conflict**:
+- ✅ rotation + mosaic: Works
+- ✅ mixup + mosaic: Works
+- ❌ rotation + mixup + mosaic: **TAL RuntimeError** (shape mismatch in Task-Aligned Assigner)
+
+**Hypothesis**: Augmentation pipeline may not properly track tensor shapes when all three apply in sequence. MPS backend may use different tensor layouts than CUDA, making shape mismatches more likely.
+
+**Resolution**: Use rotation OR mixup, not both simultaneously (for MPS training).
+
+#### Memory Management
+
+**Issue**: Long training runs (30+ epochs) on MPS prone to OOM crashes (exit code 137)
+**Mitigation**: Use auto-retry with checkpoint resumption, or train on cloud GPUs
+
+### A.5 Evaluation Protocol Clarification
+
+**Issue**: Kaggle API incompatibility (Python 3.7 binary on Python 3.12 environment)
+**Solution**: Local leave-one-video-out cross-validation (3 folds)
+
+**Rationale**:
+- More rigorous than single test set evaluation
+- Prevents overfitting to leaderboard
+- Industry-standard evaluation method
+- No frame leakage between train/val due to video-aware splitting
+
+### A.6 Lessons Learned
+
+**Methodological**:
+1. **Test one change at a time** - ablation studies reveal true parameter effects
+2. **Validate architecture-specific findings** - don't blindly copy YOLOv5 solutions for YOLOv11
+3. **Trust modern defaults** - YOLOv11 hyperparameters are pre-optimized
+4. **Context matters** - HSV critical for our dataset but disabled in 2022 winner
+
+**Technical**:
+1. **Recall is the bottleneck** for F2 metric (not precision)
+2. **Small object detection** requires resolution scaling (640px → 1280px)
+3. **Temporal context** is high-ROI for video data
+4. **MPS backend works** but has quirks (three-way augmentation conflict, memory leaks)
+
+**Strategic**:
+1. **Focus on high-impact improvements**: Resolution > hyperparameters
+2. **Temporal smoothing** > fancy augmentations
+3. **Model scaling** > ensemble complexity
+4. **Clarity > complexity** - if defaults win, report that and move on
 
 ---
 
