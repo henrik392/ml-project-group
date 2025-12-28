@@ -261,10 +261,13 @@ def draw_detections(
     Returns:
         Scaled frame with annotations
     """
-    # Scale frame
+    # Make a copy to avoid modifying the original
+    frame = frame.copy()
+
+    # Scale frame with consistent interpolation
     h, w = frame.shape[:2]
     new_w, new_h = int(w * scale_factor), int(h * scale_factor)
-    scaled = cv2.resize(frame, (new_w, new_h))
+    scaled = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
 
     # Draw boxes (scale coordinates)
     for det in detections:
@@ -321,9 +324,24 @@ def create_grid_frame(frames: list[np.ndarray]) -> np.ndarray:
     Returns:
         Combined grid (1280x720)
     """
+    # Verify all frames have correct dimensions
+    expected_shape = (360, 640, 3)
+    for i, frame in enumerate(frames):
+        if frame.shape != expected_shape:
+            raise ValueError(
+                f"Frame {i} has shape {frame.shape}, expected {expected_shape}"
+            )
+
     top_row = np.hstack([frames[0], frames[1]])
     bottom_row = np.hstack([frames[2], frames[3]])
-    return np.vstack([top_row, bottom_row])
+    grid = np.vstack([top_row, bottom_row])
+
+    # Ensure output is correct size
+    assert grid.shape == (720, 1280, 3), (
+        f"Grid shape is {grid.shape}, expected (720, 1280, 3)"
+    )
+
+    return grid
 
 
 def generate_comparison_video(
@@ -377,9 +395,16 @@ def generate_comparison_video(
             frames=frames if max_frames else None,
         )
 
-    # Setup video writer
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    # Setup video writer with better codec settings
+    # Try H.264 codec first (better quality, less flickering)
+    fourcc = cv2.VideoWriter_fourcc(*"avc1")  # H.264
     writer = cv2.VideoWriter(str(output), fourcc, fps, (1280, 720))
+
+    # Check if writer opened successfully
+    if not writer.isOpened():
+        print("  Warning: H.264 codec not available, falling back to mp4v")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        writer = cv2.VideoWriter(str(output), fourcc, fps, (1280, 720))
 
     print("\nGenerating video...")
     # Process each frame
@@ -390,12 +415,19 @@ def generate_comparison_video(
         grid_inputs = []
         for method in METHODS:
             preds = all_predictions[method.experiment_id]
-            frame_dets = preds[idx] if idx < len(preds) else []
+            # Ensure we have predictions for this frame
+            if idx < len(preds):
+                frame_dets = preds[idx]
+            else:
+                frame_dets = []
+                print(f"  Warning: No predictions for frame {idx} in {method.name}")
 
             annotated = draw_detections(frame, frame_dets, method.color, method.name)
             grid_inputs.append(annotated)
 
         grid_frame = create_grid_frame(grid_inputs)
+        # Ensure frame is uint8 and contiguous
+        grid_frame = np.ascontiguousarray(grid_frame, dtype=np.uint8)
         writer.write(grid_frame)
 
     writer.release()
