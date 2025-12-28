@@ -139,6 +139,11 @@ def calculate_f2_dataset(
     recalls = []
     f2_scores = []
 
+    # Track total counts for debugging
+    total_pred_boxes = 0
+    total_gt_boxes = 0
+    total_tp = 0
+
     for _, row in merged.iterrows():
         p, r, f2 = calculate_f2_single_image(
             pred_boxes=row["boxes_pred"],
@@ -149,9 +154,28 @@ def calculate_f2_dataset(
         recalls.append(r)
         f2_scores.append(f2)
 
+        # Count boxes
+        n_pred = len(row["boxes_pred"])
+        n_gt = len(row["boxes_gt"])
+        total_pred_boxes += n_pred
+        total_gt_boxes += n_gt
+
+        # Estimate TP (precision * predictions)
+        if n_pred > 0:
+            total_tp += int(p * n_pred)
+
+    # Print debug info
+    print(f"Total predictions: {total_pred_boxes}")
+    print(f"Total ground truth: {total_gt_boxes}")
+    print(f"Estimated TP: {total_tp}")
+    print(f"Overall precision: {total_tp / total_pred_boxes if total_pred_boxes > 0 else 0:.4f}")
+    print(f"Overall recall: {total_tp / total_gt_boxes if total_gt_boxes > 0 else 0:.4f}")
+
     return {
         "precision": np.mean(precisions),
         "recall": np.mean(recalls),
         "f2": np.mean(f2_scores),
         "n_images": len(merged),
+        "total_predictions": total_pred_boxes,
+        "total_ground_truth": total_gt_boxes,
     }

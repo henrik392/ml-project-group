@@ -51,17 +51,28 @@ echo ""
 overall_start=$(date +%s)
 
 # List of experiments to run (edit this list as needed)
+# Uncomment the set you want to run:
+
+# TEST MODE - Quick 1-epoch validation (use this first!)
+# EXPERIMENTS=(
+#     "configs/experiments/test/test_exp01.yaml"
+#     "configs/experiments/test/test_exp02.yaml"
+#     "configs/experiments/test/test_exp05.yaml"
+# )
+
+# FULL MODE - Complete 30-epoch training runs
 EXPERIMENTS=(
     "configs/experiments/exp01_yolov5_baseline.yaml"
     "configs/experiments/exp02_yolov11_baseline.yaml"
     "configs/experiments/exp05_resolution_scaling.yaml"
-    # Add more experiments here as needed:
-    # "configs/experiments/exp03_conf_sweep.yaml"
-    # "configs/experiments/exp04_iou_sweep.yaml"
-    # "configs/experiments/exp06_sahi_inference.yaml"
-    # "configs/experiments/exp07_bytetrack.yaml"
-    # "configs/experiments/exp08_sahi_bytetrack.yaml"
 )
+
+# Add more experiments here as needed:
+# "configs/experiments/exp03_conf_sweep.yaml"
+# "configs/experiments/exp04_iou_sweep.yaml"
+# "configs/experiments/exp06_sahi_inference.yaml"
+# "configs/experiments/exp07_bytetrack.yaml"
+# "configs/experiments/exp08_sahi_bytetrack.yaml"
 
 # Run all experiments
 for experiment in "${EXPERIMENTS[@]}"; do
