@@ -1,0 +1,51 @@
+# TEST: Experiment 5 - YOLOv11n 1280px (1 epoch for validation)
+
+experiment_id: test_exp05_resolution
+description: "TEST: YOLOv11n 1280px - 1 epoch validation"
+
+# Model configuration
+model: yolov11n
+weights: null
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters (1 epoch for quick test)
+epochs: 1
+imgsz: 1280
+batch: 4
+device: mps
+patience: 5
+seed: 42
+
+# Hyperparameters (keep defaults)
+hyperparameters:
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+
+# Augmentation (keep defaults)
+augmentation:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0
+
+# Inference configuration
+inference:
+  mode: standard
+  conf: 0.25
+  iou: 0.45
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+notes: "Quick validation test with 1 epoch at 1280px resolution"

@@ -83,8 +83,21 @@ def train_from_config(
         print(f"Loading from checkpoint: {checkpoint_path}")
         model = YOLO(checkpoint_path)
     else:
-        print(f"Loading pretrained {model_name}")
-        model = YOLO(f"{model_name}.pt")
+        # Check if custom weights specified in config
+        weights_path = config.get("weights")
+        if weights_path:
+            print(f"Loading custom weights: {weights_path}")
+            model = YOLO(weights_path)
+        else:
+            # Load pretrained weights - Ultralytics auto-downloads if not found
+            print(f"Loading pretrained {model_name}")
+            # Use .pt extension - Ultralytics will check cache and download if needed
+            try:
+                model = YOLO(f"{model_name}.pt")
+            except FileNotFoundError:
+                # If local file not found, try downloading from Ultralytics
+                print(f"Local weights not found, downloading {model_name}...")
+                model = YOLO(model_name)
 
     # Build training kwargs
     train_kwargs = {

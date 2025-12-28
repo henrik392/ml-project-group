@@ -101,18 +101,24 @@ def load_ground_truth(fold_id: int, eval_video_id: str) -> pd.DataFrame:
                 # Parse annotations: "conf x y width height ..."
                 annotations = str(row["annotations"]).strip()
                 if annotations:
+                    # Remove commas and other non-numeric characters except spaces, dots, and minus
+                    annotations = annotations.replace(',', ' ')
                     parts = annotations.split()
                     # Each detection: conf x y width height (5 values)
                     for i in range(0, len(parts), 5):
                         if i + 4 < len(parts):
-                            boxes.append(
-                                {
-                                    "x": int(float(parts[i + 1])),
-                                    "y": int(float(parts[i + 2])),
-                                    "width": int(float(parts[i + 3])),
-                                    "height": int(float(parts[i + 4])),
-                                }
-                            )
+                            try:
+                                boxes.append(
+                                    {
+                                        "x": int(float(parts[i + 1])),
+                                        "y": int(float(parts[i + 2])),
+                                        "width": int(float(parts[i + 3])),
+                                        "height": int(float(parts[i + 4])),
+                                    }
+                                )
+                            except (ValueError, IndexError):
+                                # Skip malformed annotations
+                                print(f"Warning: Skipping malformed annotation in {image_id}: {parts[i:i+5]}")
 
         # Use frame number as image_id
         frame = image_id.split("-")[1]

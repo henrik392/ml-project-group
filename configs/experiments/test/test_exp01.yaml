@@ -1,0 +1,35 @@
+# TEST: Experiment 1 - YOLOv5n (1 epoch for validation)
+
+experiment_id: test_exp01_yolov5
+description: "TEST: YOLOv5n baseline - 1 epoch validation"
+
+# Model configuration
+model: yolov5n
+weights: null
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters (1 epoch for quick test)
+epochs: 1
+imgsz: 640
+batch: 16
+device: mps
+patience: 5
+seed: 42
+
+# Inference configuration
+inference:
+  mode: standard
+  conf: 0.25
+  iou: 0.45
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+notes: "Quick validation test with 1 epoch"
