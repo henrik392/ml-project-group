@@ -1,4 +1,4 @@
-.PHONY: help data download prepare-yolo create-folds exp-baseline exp-yolov5 exp-sahi exp-bytetrack overnight clean clean-runs clean-data
+.PHONY: help data download prepare-yolo create-folds exp-baseline exp-yolov5 exp-sahi exp-bytetrack overnight video video-test clean clean-runs clean-data
 
 # Default target
 help:
@@ -15,6 +15,9 @@ help:
 	@echo "  make exp-sahi        - Run SAHI inference experiment (exp06)"
 	@echo "  make exp-bytetrack   - Run ByteTrack experiment (exp07)"
 	@echo "  make overnight       - Run multiple experiments sequentially (edit run_overnight.sh)"
+	@echo ""
+	@echo "  make video           - Generate 2x2 comparison video (outputs/videos/comparison_4up.mp4)"
+	@echo "  make video-test      - Generate test video with 100 frames (faster)"
 	@echo ""
 	@echo "  make clean           - Clean all generated files"
 	@echo "  make clean-runs      - Clean training runs only"
@@ -69,6 +72,17 @@ overnight:
 evaluate:
 	@echo "Evaluating F2 score..."
 	@uv run src/evaluation/f2_score.py
+
+# Video generation
+video:
+	@echo "Generating 2x2 comparison video (this may take 30-60 minutes)..."
+	@uv run python -m src.visualization.video_grid
+	@echo "✓ Video saved to outputs/videos/comparison_4up.mp4"
+
+video-test:
+	@echo "Generating test video with 100 frames..."
+	@uv run python -m src.visualization.video_grid --max-frames 100
+	@echo "✓ Test video saved to outputs/videos/comparison_4up.mp4"
 
 # Inference
 predict:
