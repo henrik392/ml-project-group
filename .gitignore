@@ -17,5 +17,9 @@ wheels/
 # Model weights and outputs
 /models/
 /runs/
+/outputs/
 *.pt
 *.log
+
+# Test configs
+configs/experiments/test/
