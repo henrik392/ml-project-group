@@ -4,6 +4,7 @@ Evaluation utilities for COTS detection experiments.
 Computes F2, mAP50, precision, recall from predictions and ground truth.
 """
 
+import ast
 import pandas as pd
 from pathlib import Path
 
@@ -98,27 +99,28 @@ def load_ground_truth(fold_id: int, eval_video_id: str) -> pd.DataFrame:
         boxes = []
         for _, row in group.iterrows():
             if pd.notna(row["annotations"]):
-                # Parse annotations: "conf x y width height ..."
-                annotations = str(row["annotations"]).strip()
-                if annotations:
-                    # Remove commas and other non-numeric characters except spaces, dots, and minus
-                    annotations = annotations.replace(',', ' ')
-                    parts = annotations.split()
-                    # Each detection: conf x y width height (5 values)
-                    for i in range(0, len(parts), 5):
-                        if i + 4 < len(parts):
-                            try:
-                                boxes.append(
-                                    {
-                                        "x": int(float(parts[i + 1])),
-                                        "y": int(float(parts[i + 2])),
-                                        "width": int(float(parts[i + 3])),
-                                        "height": int(float(parts[i + 4])),
-                                    }
-                                )
-                            except (ValueError, IndexError):
-                                # Skip malformed annotations
-                                print(f"Warning: Skipping malformed annotation in {image_id}: {parts[i:i+5]}")
+                # Parse annotations from Python literal format: [{'x': 123, 'y': 456, ...}]
+                annotations_str = str(row["annotations"]).strip()
+                if annotations_str and annotations_str != "[]":
+                    try:
+                        # Parse Python list of dictionaries
+                        annotations = ast.literal_eval(annotations_str)
+
+                        # Extract bounding boxes
+                        if isinstance(annotations, list):
+                            for annot in annotations:
+                                if isinstance(annot, dict) and all(k in annot for k in ["x", "y", "width", "height"]):
+                                    boxes.append(
+                                        {
+                                            "x": int(annot["x"]),
+                                            "y": int(annot["y"]),
+                                            "width": int(annot["width"]),
+                                            "height": int(annot["height"]),
+                                        }
+                                    )
+                    except (ValueError, SyntaxError) as e:
+                        # Skip malformed annotations
+                        print(f"Warning: Skipping malformed annotation in {image_id}: {e}")
 
         # Use frame number as image_id
         frame = image_id.split("-")[1]
