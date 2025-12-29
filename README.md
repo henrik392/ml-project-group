@@ -166,6 +166,48 @@ uv run src/evaluation/f2_score.py
 uv run src/evaluation/compare_ablation.py --fold 0
 ```
 
+## Video Visualization
+
+Generate 2x2 comparison videos showing all detection methods side-by-side for the final report.
+
+```bash
+# Generate full comparison video for video_0 (default)
+uv run python -m src.visualization.video_grid
+# Or: make video
+
+# Test with limited frames first (faster)
+uv run python -m src.visualization.video_grid --max-frames 100
+# Or: make video-test
+
+# Generate for a different video
+uv run python -m src.visualization.video_grid --video-id video_1
+
+# Force re-run inference (ignore cache)
+uv run python -m src.visualization.video_grid --no-cache
+```
+
+**Output**: `outputs/videos/comparison_4up.mp4` (1280x720, 30 FPS)
+
+**Grid layout**:
+```
+┌─────────────┬─────────────┐
+│   YOLOv5    │   YOLOv11   │  ← Orange/Green boxes
+├─────────────┼─────────────┤
+│    SAHI     │ SAHI+Track  │  ← Blue/Magenta boxes
+└─────────────┴─────────────┘
+```
+
+Each quadrant shows:
+- Color-coded bounding boxes with confidence scores
+- Method name (top-left)
+- Detection count per frame (bottom-left)
+
+**Performance notes**:
+- Uses prediction caching for faster re-runs
+- MPS acceleration enabled
+- Full video (~6700 frames) takes 30-60 minutes
+- Test mode recommended for quick validation
+
 ## Inference
 
 ```bash
