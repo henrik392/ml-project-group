@@ -13,7 +13,7 @@ data: configs/dataset_fold_0.yaml
 fold_id: 0
 
 # Training parameters
-epochs: 30
+epochs: 6
 imgsz: 1280  # 4× pixels vs baseline (640)
 batch: 4     # Reduced due to 4× memory requirement
 device: mps

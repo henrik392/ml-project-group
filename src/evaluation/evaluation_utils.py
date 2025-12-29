@@ -99,22 +99,26 @@ def load_ground_truth(fold_id: int, eval_video_id: str) -> pd.DataFrame:
         boxes = []
         for _, row in group.iterrows():
             if pd.notna(row["annotations"]):
-                # Parse annotations: "[{'x': 276, 'y': 631, 'width': 116, 'height': 88}]"
-                annotations = str(row["annotations"]).strip()
-                if annotations and annotations != "[]":
+                # Parse annotations from Python literal format: [{'x': 123, 'y': 456, ...}]
+                annotations_str = str(row["annotations"]).strip()
+                if annotations_str and annotations_str != "[]":
                     try:
-                        # Parse Python dict/list string using ast.literal_eval
-                        ann_list = ast.literal_eval(annotations)
-                        for ann in ann_list:
-                            boxes.append(
-                                {
-                                    "x": int(ann["x"]),
-                                    "y": int(ann["y"]),
-                                    "width": int(ann["width"]),
-                                    "height": int(ann["height"]),
-                                }
-                            )
-                    except (ValueError, SyntaxError, KeyError) as e:
+                        # Parse Python list of dictionaries
+                        annotations = ast.literal_eval(annotations_str)
+
+                        # Extract bounding boxes
+                        if isinstance(annotations, list):
+                            for annot in annotations:
+                                if isinstance(annot, dict) and all(k in annot for k in ["x", "y", "width", "height"]):
+                                    boxes.append(
+                                        {
+                                            "x": int(annot["x"]),
+                                            "y": int(annot["y"]),
+                                            "width": int(annot["width"]),
+                                            "height": int(annot["height"]),
+                                        }
+                                    )
+                    except (ValueError, SyntaxError) as e:
                         # Skip malformed annotations
                         print(f"Warning: Skipping malformed annotation in {image_id}: {e}")
 
