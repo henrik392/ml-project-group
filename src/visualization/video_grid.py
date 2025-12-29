@@ -200,8 +200,8 @@ def load_or_run_inference(
         else:
             detector = YOLO(str(weights_path))
 
-        # Run detection on each frame - convert immediately to avoid memory buildup
-        predictions = []
+        # Run detection on each frame
+        frame_results = []
         for idx, frame in enumerate(frames):
             if use_sahi:
                 sahi_config = config.get("inference", {}).get("sahi", {})
@@ -219,51 +219,21 @@ def load_or_run_inference(
                     frame, conf=conf, iou=iou, imgsz=imgsz, verbose=False
                 )[0]
 
-            # Convert immediately to avoid accumulating large objects
-            frame_dets = []
-            if hasattr(det_result, "object_prediction_list"):
-                # SAHI format
-                for obj_pred in det_result.object_prediction_list:
-                    bbox = obj_pred.bbox
-                    frame_dets.append(
-                        [
-                            float(bbox.minx),
-                            float(bbox.miny),
-                            float(bbox.maxx),
-                            float(bbox.maxy),
-                            float(obj_pred.score.value),
-                            0,
-                        ]
-                    )
-            elif hasattr(det_result, "boxes") and det_result.boxes is not None:
-                # YOLO format
-                for box in det_result.boxes:
-                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                    frame_dets.append(
-                        [
-                            float(x1),
-                            float(y1),
-                            float(x2),
-                            float(y2),
-                            float(box.conf[0]),
-                            int(box.cls[0]),
-                        ]
-                    )
+            frame_results.append(det_result)
 
-            predictions.append(frame_dets)
-
-            # Explicitly delete result to free memory
-            del det_result
-
-            # Force garbage collection every 50 frames
-            if (idx + 1) % 50 == 0:
-                gc.collect()
-                print(f"    Processed {idx + 1}/{len(frames)} frames (GC triggered)")
-            elif (idx + 1) % 10 == 0:
+            if (idx + 1) % 10 == 0:
                 print(f"    Processed {idx + 1}/{len(frames)} frames")
 
-        # Final cleanup
-        del detector
+            # Force garbage collection every 100 frames to manage memory
+            if (idx + 1) % 100 == 0:
+                gc.collect()
+
+        # Convert to serializable format
+        has_tracking = False  # Tracking not supported with pre-loaded frames
+        predictions = convert_predictions_to_list(frame_results, has_tracking)
+
+        # Clean up to free memory
+        del detector, frame_results
         gc.collect()
     else:
         # Run full inference pipeline
