@@ -6,7 +6,8 @@ description: "Modern baseline (YOLOv11n) with default hyperparameters"
 
 # Model configuration
 model: yolov11n  # YOLOv11 nano
-weights: null    # Train from scratch
+weights: null  # Train from scratch
+# skip_training: false  # Need to retrain, exp02 weights were lost
 
 # Dataset
 data: configs/dataset_fold_0.yaml
@@ -19,6 +20,7 @@ batch: 16
 device: mps
 patience: 5
 seed: 42
+name: yolov11n_baseline_fold0  # Unique name to prevent overwriting
 
 # Hyperparameters (keep defaults)
 hyperparameters:

@@ -19,6 +19,7 @@ batch: 4     # Reduced due to 4× memory requirement
 device: mps
 patience: 5
 seed: 42
+name: yolov11n_1280_fold0  # Unique name to prevent overwriting
 
 # Hyperparameters (keep defaults)
 hyperparameters:

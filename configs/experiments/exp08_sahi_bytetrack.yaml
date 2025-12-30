@@ -6,7 +6,7 @@ description: "Combined SAHI tiled inference + ByteTrack temporal context"
 
 # Model configuration (use trained baseline)
 model: yolov11n
-weights: runs/train/yolo11n_fold0/weights/best.pt  # From exp02
+weights: runs/train/yolov11n_baseline_fold0/weights/best.pt  # From exp02
 
 # Dataset
 data: configs/dataset_fold_0.yaml

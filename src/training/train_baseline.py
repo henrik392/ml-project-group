@@ -64,7 +64,8 @@ def train_from_config(
         raise FileNotFoundError(f"Dataset config not found: {data_config}")
 
     # Find checkpoint if resuming or retrying
-    run_name = f"{model_name}_fold{fold_id}"
+    # Use custom name if provided, otherwise default to model_fold pattern
+    run_name = config.get("name", f"{model_name}_fold{fold_id}")
     checkpoint_path = None
     if resume or _retry_count > 0:
         checkpoint_path = find_latest_checkpoint(project, run_name)

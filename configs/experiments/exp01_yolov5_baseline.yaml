@@ -6,7 +6,8 @@ description: "Historical baseline (YOLOv5n) - 2022 competition SOTA"
 
 # Model configuration
 model: yolov5n  # YOLOv5 nano
-weights: null   # Train from scratch (or specify pretrained)
+weights: runs/train/yolov5n_fold0/weights/best.pt
+skip_training: true  # Skip training, just run inference + evaluation
 
 # Dataset
 data: configs/dataset_fold_0.yaml
@@ -19,6 +20,7 @@ batch: 16
 device: mps
 patience: 5
 seed: 42
+name: yolov5n_baseline_fold0  # Unique name to prevent overwriting
 
 # Inference configuration
 inference:

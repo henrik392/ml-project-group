@@ -62,8 +62,8 @@ overall_start=$(date +%s)
 
 # FULL MODE - Complete 30-epoch training runs
 EXPERIMENTS=(
-    "configs/experiments/exp01_yolov5_baseline.yaml"
     "configs/experiments/exp02_yolov11_baseline.yaml"
+    "configs/experiments/exp01_yolov5_baseline.yaml"
     "configs/experiments/exp05_resolution_scaling.yaml"
 )
 
