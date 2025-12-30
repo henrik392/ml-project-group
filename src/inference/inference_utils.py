@@ -17,30 +17,40 @@ from sahi.predict import get_sliced_prediction
 from ultralytics import YOLO
 
 
-def load_frames(source: str) -> list:
-    """Load frames from video file or image directory."""
+def load_frames(source: str) -> tuple[list, list]:
+    """
+    Load frames from video file or image directory.
+
+    Returns:
+        Tuple of (frames, frame_ids) where frame_ids are based on filename (without extension)
+    """
     source_path = Path(source)
 
     if source_path.is_file():
-        # Video file
+        # Video file - use sequential frame numbers
         cap = cv2.VideoCapture(str(source_path))
         frames = []
+        frame_ids = []
+        idx = 0
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
             frames.append(frame)
+            frame_ids.append(str(idx))
+            idx += 1
         cap.release()
     elif source_path.is_dir():
-        # Directory of images
+        # Directory of images - use filename (without extension) as frame ID
         paths = sorted(
             list(source_path.glob("*.jpg")) + list(source_path.glob("*.png"))
         )
         frames = [cv2.imread(str(p)) for p in paths]
+        frame_ids = [p.stem for p in paths]  # Use filename without extension
     else:
         raise ValueError(f"Invalid source: {source}")
 
-    return frames
+    return frames, frame_ids
 
 
 def to_tracker_format(detections, detection_type: str) -> np.ndarray:
@@ -125,7 +135,7 @@ def run_inference(config: dict, weights_path: str) -> dict:
     print(" + ByteTrack" if use_tracking else "", "inference...")
 
     # Load frames
-    frames = load_frames(source)
+    frames, frame_ids = load_frames(source)
     if verbose:
         print(f"Loaded {len(frames)} frames from {source}")
 
@@ -206,6 +216,7 @@ def run_inference(config: dict, weights_path: str) -> dict:
     ms_per_frame = (total_time / len(frames)) * 1000 if frames else 0
     return {
         "predictions": results,
+        "frame_ids": frame_ids,
         "ms_per_frame": ms_per_frame,
         "num_images": len(results),
     }

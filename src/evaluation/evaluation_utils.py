@@ -11,12 +11,15 @@ from pathlib import Path
 from src.evaluation.f2_score import calculate_f2_dataset
 
 
-def convert_detections_to_boxes(results, has_tracking: bool = False) -> pd.DataFrame:
+def convert_detections_to_boxes(
+    results, frame_ids: list[str] = None, has_tracking: bool = False
+) -> pd.DataFrame:
     """
     Convert detection results to boxes format for evaluation.
 
     Args:
         results: List of detection results (YOLO Results, SAHI PredictionResult, or tracking dicts)
+        frame_ids: List of frame IDs (e.g., ['0', '1', '2348', ...]). If None, uses sequential indices.
         has_tracking: Whether results include tracking info (dict format)
 
     Returns:
@@ -25,7 +28,9 @@ def convert_detections_to_boxes(results, has_tracking: bool = False) -> pd.DataF
     predictions = []
 
     for idx, result in enumerate(results):
-        image_id = f"frame_{idx}"
+        # Use provided frame_id or fall back to index
+        frame_id = frame_ids[idx] if frame_ids else str(idx)
+        image_id = f"frame_{frame_id}"
         boxes = []
 
         # Extract detection object
@@ -197,8 +202,9 @@ def evaluate_from_config(
 
     # Convert predictions to DataFrame (works for all modes)
     pred_results = predictions["predictions"]
+    frame_ids = predictions.get("frame_ids", None)
     predictions_df = convert_detections_to_boxes(
-        pred_results, has_tracking=tracking_enabled
+        pred_results, frame_ids=frame_ids, has_tracking=tracking_enabled
     )
 
     # Load ground truth
