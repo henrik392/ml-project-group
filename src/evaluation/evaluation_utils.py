@@ -109,7 +109,9 @@ def load_ground_truth(fold_id: int, eval_video_id: str) -> pd.DataFrame:
                         # Extract bounding boxes
                         if isinstance(annotations, list):
                             for annot in annotations:
-                                if isinstance(annot, dict) and all(k in annot for k in ["x", "y", "width", "height"]):
+                                if isinstance(annot, dict) and all(
+                                    k in annot for k in ["x", "y", "width", "height"]
+                                ):
                                     boxes.append(
                                         {
                                             "x": int(annot["x"]),
@@ -120,13 +122,15 @@ def load_ground_truth(fold_id: int, eval_video_id: str) -> pd.DataFrame:
                                     )
                     except (ValueError, SyntaxError) as e:
                         # Skip malformed annotations
-                        print(f"Warning: Skipping malformed annotation in {image_id}: {e}")
+                        print(
+                            f"Warning: Skipping malformed annotation in {image_id}: {e}"
+                        )
 
-        # Use frame number as image_id
-        frame = image_id.split("-")[1]
+        # Use frame number as image_id (format to match predictions: "frame_N")
+        frame_num = image_id.split("-")[1]
         ground_truth.append(
             {
-                "image_id": frame,
+                "image_id": f"frame_{frame_num}",
                 "boxes": boxes,
             }
         )

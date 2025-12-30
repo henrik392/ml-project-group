@@ -55,7 +55,7 @@ def calculate_f2_single_image(
         Tuple of (precision, recall, f2_score)
     """
     if len(pred_boxes) == 0 and len(gt_boxes) == 0:
-        return 1.0, 1.0, 1.0  # Perfect score if both empty
+        return None, None, None  # Skip frames with no GT (standard practice)
 
     if len(pred_boxes) == 0:
         return 0.0, 0.0, 0.0  # No predictions
@@ -126,6 +126,11 @@ def calculate_f2_dataset(
         suffixes=("_pred", "_gt"),
     )
 
+    # Debug: Verify merge correctness
+    print(f"Merged rows: {len(merged)}")
+    print(f"Prediction-only rows: {merged['boxes_gt'].isna().sum()}")
+    print(f"GT-only rows: {merged['boxes_pred'].isna().sum()}")
+
     # Fill NaN with empty lists
     merged["boxes_pred"] = merged["boxes_pred"].apply(
         lambda x: x if isinstance(x, list) else []
@@ -144,6 +149,12 @@ def calculate_f2_dataset(
     total_gt_boxes = 0
     total_tp = 0
 
+    # Track frame type distribution
+    frames_both = 0
+    frames_pred_only = 0
+    frames_gt_only = 0
+    frames_empty = 0
+
     for _, row in merged.iterrows():
         p, r, f2 = calculate_f2_single_image(
             pred_boxes=row["boxes_pred"],
@@ -160,22 +171,57 @@ def calculate_f2_dataset(
         total_pred_boxes += n_pred
         total_gt_boxes += n_gt
 
+        # Track frame types
+        if n_pred > 0 and n_gt > 0:
+            frames_both += 1
+        elif n_pred > 0:
+            frames_pred_only += 1
+        elif n_gt > 0:
+            frames_gt_only += 1
+        else:
+            frames_empty += 1
+
         # Estimate TP (precision * predictions)
-        if n_pred > 0:
+        if n_pred > 0 and p is not None:
             total_tp += int(p * n_pred)
 
+    # Filter out None values (frames with no GT)
+    valid_scores = [
+        (p, r, f) for p, r, f in zip(precisions, recalls, f2_scores) if f is not None
+    ]
+
+    if valid_scores:
+        valid_precisions, valid_recalls, valid_f2_scores = zip(*valid_scores)
+    else:
+        valid_precisions = valid_recalls = valid_f2_scores = [0.0]
+
     # Print debug info
-    print(f"Total predictions: {total_pred_boxes}")
-    print(f"Total ground truth: {total_gt_boxes}")
-    print(f"Estimated TP: {total_tp}")
-    print(f"Overall precision: {total_tp / total_pred_boxes if total_pred_boxes > 0 else 0:.4f}")
-    print(f"Overall recall: {total_tp / total_gt_boxes if total_gt_boxes > 0 else 0:.4f}")
+    print("\nFrame Distribution:")
+    print(f"  Both pred & GT: {frames_both}")
+    print(f"  Pred only: {frames_pred_only}")
+    print(f"  GT only: {frames_gt_only}")
+    print(f"  Empty: {frames_empty}")
+    print("\nBox Statistics:")
+    print(f"  Total predictions: {total_pred_boxes}")
+    print(f"  Total ground truth: {total_gt_boxes}")
+    print(f"  Estimated TP: {total_tp}")
+    print("\nEvaluation:")
+    print(
+        f"  Frames evaluated: {len(valid_scores)} (excluded {len(precisions) - len(valid_scores)} empty frames)"
+    )
+    print(
+        f"  Overall precision: {total_tp / total_pred_boxes if total_pred_boxes > 0 else 0:.4f}"
+    )
+    print(
+        f"  Overall recall: {total_tp / total_gt_boxes if total_gt_boxes > 0 else 0:.4f}"
+    )
 
     return {
-        "precision": np.mean(precisions),
-        "recall": np.mean(recalls),
-        "f2": np.mean(f2_scores),
+        "precision": np.mean(valid_precisions),
+        "recall": np.mean(valid_recalls),
+        "f2": np.mean(valid_f2_scores),
         "n_images": len(merged),
+        "n_evaluated": len(valid_scores),
         "total_predictions": total_pred_boxes,
         "total_ground_truth": total_gt_boxes,
     }
