@@ -163,14 +163,70 @@ def main():
     training_results = run_training(config)
     weights_path = training_results["weights"]
 
-    # 2. Inference
-    predictions = run_inference(config, weights_path)
+    # 2. Check for parameter sweeps
+    inference_config = config.get("inference", {})
+    conf_sweep = inference_config.get("conf_sweep", None)
+    iou_sweep = inference_config.get("iou_sweep", None)
 
-    # 3. Evaluation
-    metrics = run_evaluation(predictions, config)
+    if conf_sweep or iou_sweep:
+        # Run sweep experiments
+        print("\n[INFO] Running parameter sweep:")
+        if conf_sweep:
+            print(f"  conf_sweep: {conf_sweep}")
+        if iou_sweep:
+            print(f"  iou_sweep: {iou_sweep}")
 
-    # 4. Save results
-    save_results(metrics, config)
+        # Generate sweep configs
+        sweep_configs = []
+        if conf_sweep and iou_sweep:
+            # Both sweeps - run cartesian product
+            for conf_val in conf_sweep:
+                for iou_val in iou_sweep:
+                    sweep_configs.append({"conf": conf_val, "iou": iou_val})
+        elif conf_sweep:
+            # Only conf sweep
+            for conf_val in conf_sweep:
+                sweep_configs.append(
+                    {"conf": conf_val, "iou": inference_config.get("iou", 0.45)}
+                )
+        elif iou_sweep:
+            # Only iou sweep
+            for iou_val in iou_sweep:
+                sweep_configs.append(
+                    {"conf": inference_config.get("conf", 0.25), "iou": iou_val}
+                )
+
+        # Run each sweep configuration
+        for idx, sweep_params in enumerate(sweep_configs, 1):
+            print(
+                f"\n[INFO] Sweep {idx}/{len(sweep_configs)}: conf={sweep_params['conf']}, iou={sweep_params['iou']}"
+            )
+
+            # Create modified config for this sweep
+            sweep_config = config.copy()
+            sweep_config["inference"] = inference_config.copy()
+            sweep_config["inference"]["conf"] = sweep_params["conf"]
+            sweep_config["inference"]["iou"] = sweep_params["iou"]
+
+            # 2. Inference
+            predictions = run_inference(sweep_config, weights_path)
+
+            # 3. Evaluation
+            metrics = run_evaluation(predictions, sweep_config)
+
+            # 4. Save results
+            save_results(metrics, sweep_config)
+
+    else:
+        # Standard single-config experiment
+        # 2. Inference
+        predictions = run_inference(config, weights_path)
+
+        # 3. Evaluation
+        metrics = run_evaluation(predictions, config)
+
+        # 4. Save results
+        save_results(metrics, config)
 
     elapsed = time.time() - start_time
     print(f"\n[INFO] Total time: {elapsed:.1f}s")
