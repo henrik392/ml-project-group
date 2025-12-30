@@ -27,9 +27,9 @@ inference:
     slice_width: 640
     overlap_height_ratio: 0.2
     overlap_width_ratio: 0.2
-    postprocess_type: NMS  # or GREEDYNMM
-    postprocess_match_metric: IOS  # or IOU
-    postprocess_match_threshold: 0.5
+    postprocess_type: NMS
+    postprocess_match_metric: IOU  # Changed from IOS - less aggressive for small objects
+    postprocess_match_threshold: 0.3  # Lowered from 0.5 - merge more liberally
 
 # Tracking
 tracking:
