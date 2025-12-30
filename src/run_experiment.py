@@ -92,7 +92,7 @@ def save_results(
         "eval_video_id": config.get(
             "eval_video_id", f"video_{config.get('fold_id', 0)}"
         ),
-        "model": config.get("model", "yolov11n"),
+        "model": config.get("model", "yolo11n"),
         "inference": inference_config.get("mode", "standard"),
         "tracking": tracking_config.get("tracker", "bytetrack")
         if tracking_config.get("enabled", False)

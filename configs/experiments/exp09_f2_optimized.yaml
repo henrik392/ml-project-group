@@ -5,7 +5,7 @@ experiment_id: exp09_f2_optimized
 description: "YOLOv11n retrained with F2-optimized hyperparameters (recall >> precision)"
 
 # Model configuration
-model: yolov11n  # YOLOv11 nano
+model: yolo11n  # YOLOv11 nano
 weights: null    # Train from pretrained COCO weights
 skip_training: false
 
@@ -14,13 +14,13 @@ data: configs/dataset_fold_0.yaml
 fold_id: 0
 
 # Training parameters
-epochs: 50       # Increased from 30 (more training time)
-imgsz: 1280      # CRITICAL: 4× pixels for small objects (was 640)
-batch: 4         # Reduced from 16 due to 4× memory from larger images
+epochs: 2
+imgsz: 640      # CRITICAL: 4× pixels for small objects (was 640) 1280
+batch: 16
 device: mps
 patience: 5      # FIXED: Actually stop early (was 100)
 seed: 42
-name: yolov11n_f2_optimized_fold0
+name: yolo11n_f2_optimized_fold0
 
 # F2-OPTIMIZED HYPERPARAMETERS
 # ════════════════════════════════════════════════════════════

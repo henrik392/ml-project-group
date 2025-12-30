@@ -24,7 +24,7 @@ def train_from_config(
 
     Args:
         config: Experiment configuration dict with keys:
-            - model: Model name (yolov11n, yolov5n, etc.)
+            - model: Model name (yolo11n, yolov5n, etc.)
             - data: Path to dataset YAML
             - fold_id: Fold number (0, 1, or 2)
             - epochs: Number of training epochs
@@ -39,7 +39,7 @@ def train_from_config(
         Dict with training results including weights path and metrics
     """
     # Extract config values with defaults
-    model_name = config.get("model", "yolov11n")
+    model_name = config.get("model", "yolo11n")
     data_config = config.get(
         "data", f"configs/dataset_fold_{config.get('fold_id', 0)}.yaml"
     )

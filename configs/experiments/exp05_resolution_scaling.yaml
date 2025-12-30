@@ -5,7 +5,7 @@ experiment_id: exp05_resolution_1280
 description: "Resolution scaling (640 → 1280) for small object improvement"
 
 # Model configuration
-model: yolov11n
+model: yolo11n
 weights: null  # Train from scratch at new resolution
 
 # Dataset
@@ -19,7 +19,7 @@ batch: 4     # Reduced due to 4× memory requirement
 device: mps
 patience: 5
 seed: 42
-name: yolov11n_1280_fold0  # Unique name to prevent overwriting
+name: yolo11n_1280_fold0  # Unique name to prevent overwriting
 
 # Hyperparameters (keep defaults)
 hyperparameters:

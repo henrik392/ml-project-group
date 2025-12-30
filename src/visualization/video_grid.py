@@ -158,8 +158,8 @@ def load_or_run_inference(
         weights_path = Path(config["weights"])
     else:
         # Construct path from model name and fold (for training experiments)
-        model_name = config.get("model", "yolov11n")
-        # Normalize model name (yolov11n -> yolo11n for directory name, but keep yolov5n as is)
+        model_name = config.get("model", "yolo11n")
+        # Normalize model name (yolo11n -> yolo11n for directory name, but keep yolov5n as is)
         if "yolov11" in model_name:
             model_name = model_name.replace("yolov11", "yolo11")
         fold_id = config.get("fold_id", 0)
