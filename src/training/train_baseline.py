@@ -6,6 +6,7 @@ Phase 1: Simple baseline with default hyperparameters.
 
 import argparse
 from pathlib import Path
+import torch
 
 from ultralytics import YOLO
 
@@ -16,7 +17,8 @@ def train_fold(
     epochs: int = 50,
     imgsz: int = 640,
     batch: int = 16,
-    device: str = "mps",
+    cache: str = None,
+    device: str = "cuda" if torch.cuda.is_available() else "cpu",
     project: str = "runs/train",
 ) -> None:
     """
@@ -28,6 +30,7 @@ def train_fold(
         epochs: Number of training epochs
         imgsz: Image size for training
         batch: Batch size
+        cache: Cache images ('ram', 'disk', or None)
         device: Device to use ('mps' for M4 Max, 'cuda' for GPU, 'cpu')
         project: Project directory for saving runs
     """
@@ -51,6 +54,7 @@ def train_fold(
         epochs=epochs,
         imgsz=imgsz,
         batch=batch,
+        cache=cache,
         device=device,
         project=project,
         name=f"yolo11{model_size}_fold{fold}",
@@ -84,7 +88,8 @@ def train_all_folds(
     epochs: int = 50,
     imgsz: int = 640,
     batch: int = 16,
-    device: str = "mps",
+    cache: str = None,
+    device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ) -> dict:
     """
     Train on all 3 folds for cross-validation.
@@ -94,6 +99,7 @@ def train_all_folds(
         epochs: Number of training epochs
         imgsz: Image size
         batch: Batch size
+        cache: Cache images
         device: Device to use
 
     Returns:
@@ -112,6 +118,7 @@ def train_all_folds(
             epochs=epochs,
             imgsz=imgsz,
             batch=batch,
+            cache=cache,
             device=device,
         )
 
@@ -140,7 +147,8 @@ def main():
     parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
     parser.add_argument("--imgsz", type=int, default=640, help="Image size")
     parser.add_argument("--batch", type=int, default=16, help="Batch size")
-    parser.add_argument("--device", type=str, default="mps", help="Device (mps, cuda, cpu)")
+    parser.add_argument("--cache", type=str, default=None, choices=["ram", "disk"], help="Cache images (ram, disk)")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (mps, cuda, cpu)")
 
     args = parser.parse_args()
 
@@ -152,6 +160,7 @@ def main():
             epochs=args.epochs,
             imgsz=args.imgsz,
             batch=args.batch,
+            cache=args.cache,
             device=args.device,
         )
     else:
@@ -161,6 +170,7 @@ def main():
             epochs=args.epochs,
             imgsz=args.imgsz,
             batch=args.batch,
+            cache=args.cache,
             device=args.device,
         )
 
