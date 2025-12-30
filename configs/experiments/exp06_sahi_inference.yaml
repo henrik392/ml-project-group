@@ -18,8 +18,8 @@ skip_training: true
 # Inference configuration
 inference:
   mode: sahi
-  conf: 0.25  # Or optimal from exp03
-  iou: 0.45   # Or optimal from exp04
+  conf: 0.01  # Optimal from exp03 (F2=0.088)
+  iou: 0.45
 
   # SAHI-specific settings
   sahi:
