@@ -18,8 +18,8 @@ skip_training: true
 # Inference configuration (sweep)
 inference:
   mode: standard
-  conf: 0.25  # Use default (or optimal from exp03)
-  iou_sweep: [0.3, 0.45, 0.5, 0.6, 0.7]  # NMS IoU thresholds
+  conf: 0.01  # Optimal from exp03 (F2=0.088)
+  iou_sweep: [0.3, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9]  # Per Perplexity: sweep up to 0.8-0.9
 
 # Tracking
 tracking:
