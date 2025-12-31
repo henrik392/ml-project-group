@@ -6,7 +6,8 @@ description: "Resolution scaling (640 → 1280) for small object improvement"
 
 # Model configuration
 model: yolo11n
-weights: null  # Train from scratch at new resolution
+weights: runs/train/yolo11n_1280_fold0/weights/best.pt  # Use 1-epoch trained weights
+skip_training: true  # Just evaluate existing 1-epoch model
 
 # Dataset
 data: configs/dataset_fold_0.yaml
@@ -21,27 +22,21 @@ patience: 5
 seed: 42
 name: yolo11n_1280_fold0  # Unique name to prevent overwriting
 
-# Hyperparameters (keep defaults)
-hyperparameters:
-  box: 7.5
-  cls: 0.5
-  dfl: 1.5
-
 # Augmentation (keep defaults)
-augmentation:
-  hsv_h: 0.015
-  hsv_s: 0.7
-  hsv_v: 0.4
-  degrees: 0.0
-  fliplr: 0.5
-  mosaic: 1.0
-  mixup: 0.0
+# augmentation:
+#   hsv_h: 0.015
+#   hsv_s: 0.7
+#   hsv_v: 0.4
+#   degrees: 0.0
+#   fliplr: 0.5
+#   mosaic: 1.0
+#   mixup: 0.0
 
 # Inference configuration
 inference:
   mode: standard
-  conf: 0.25
-  iou: 0.45
+  conf: 0.01  # Optimal from exp03
+  iou: 0.3    # Optimal from exp04 (marginal improvement)
 
 # Tracking
 tracking:
