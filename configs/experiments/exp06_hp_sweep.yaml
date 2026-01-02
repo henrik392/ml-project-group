@@ -1,0 +1,97 @@
+# Experiment 6: Training Hyperparameter Sweep
+# Purpose: Find optimal training hyperparameters for F2 at 1280px resolution
+
+experiment_id: exp06_hp_sweep
+description: "Hyperparameter sweep (cls, box) at 1280px for F2 optimization"
+
+# Model configuration
+model: yolo11n
+weights: null  # Train from pretrained COCO weights
+skip_training: false  # Will be overridden by sweep logic
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters
+epochs: 6  # Quick sweep to find optimal hyperparameters
+imgsz: 1280  # High resolution (optimal from exp05)
+batch: 4     # Reduced for 1280px memory requirements
+device: mps
+patience: 5
+seed: 42
+name: yolo11n_hp_sweep_fold0
+
+# Hyperparameter sweep configuration
+# Sweeps one hyperparameter at a time (not cartesian product)
+# Total runs: 4 (cls) + 3 (box) = 7 runs × 3.5hrs = ~24 hours
+hyperparameter_sweep:
+  cls: [0.5, 1.0, 2.0, 3.0]  # Classification loss weight (default 0.5)
+  box: [7.5, 5.0, 3.0]        # Bounding box loss weight (default 7.5)
+
+# Base hyperparameters (will be overridden by sweep)
+hyperparameters:
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+  lr0: 0.01
+  lrf: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3.0
+
+# Augmentation (keep proven defaults)
+augmentation:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.5
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0
+
+# Inference configuration (use defaults for now)
+inference:
+  mode: standard
+  conf: 0.25  # Will sweep conf/iou after finding best hyperparameters
+  iou: 0.45
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  HYPERPARAMETER SWEEP FOR F2 OPTIMIZATION
+
+  Goal: Find optimal training hyperparameters for single-class starfish detection.
+
+  Strategy:
+  ─────────
+  1. Sweep cls: [0.5, 1.0, 2.0, 3.0] (4 runs)
+     - Higher cls = more focus on classification (detection) vs localization
+     - Expected to improve recall → improve F2
+
+  2. Sweep box: [7.5, 5.0, 3.0] (3 runs)
+     - Lower box = less emphasis on perfect box localization
+     - May allow model to be more generous with detections
+
+  Current Baseline (exp05, 6 epochs, default hp):
+  ───────────────────────────────────────────────
+  F2: 0.303, Recall: 29.7%, Precision: 36.2%
+
+  Expected Results:
+  ─────────────────
+  - Higher cls values should improve recall at cost of precision
+  - Lower box values should reduce false negative rate
+  - Best combination should maximize F2
+
+  Time Estimate:
+  ──────────────
+  7 runs × 3.5 hrs/run = ~24 hours
+  (May split across 2 nights if needed)

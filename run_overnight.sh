@@ -60,11 +60,9 @@ overall_start=$(date +%s)
 #     "configs/experiments/test/test_exp05.yaml"
 # )
 
-# FULL MODE - Complete 30-epoch training runs
+# HYPERPARAMETER SWEEP MODE - Find optimal hyperparameters (6 epochs each)
 EXPERIMENTS=(
-    "configs/experiments/exp02_yolov11_baseline.yaml"
-    "configs/experiments/exp01_yolov5_baseline.yaml"
-    "configs/experiments/exp05_resolution_scaling.yaml"
+    "configs/experiments/exp06_hp_sweep.yaml"
 )
 
 # Add more experiments here as needed:

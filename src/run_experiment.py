@@ -85,6 +85,7 @@ def save_results(
     # Extract values with defaults
     inference_config = config.get("inference", {})
     tracking_config = config.get("tracking", {})
+    hyperparameters = config.get("hyperparameters", {})
 
     result = {
         "experiment_id": config.get("experiment_id", "unknown"),
@@ -105,6 +106,11 @@ def save_results(
         "recall": metrics.get("recall", 0.0),
         "precision": metrics.get("precision", 0.0),
         "ms_per_frame": metrics.get("ms_per_frame", 0.0),
+        "hp_cls": hyperparameters.get("cls", 0.5),
+        "hp_box": hyperparameters.get("box", 7.5),
+        "hp_dfl": hyperparameters.get("dfl", 1.5),
+        "hp_lr0": hyperparameters.get("lr0", 0.01),
+        "hp_lrf": hyperparameters.get("lrf", 0.01),
         "seed": config.get("seed", 42),
         "timestamp": datetime.now().isoformat(),
     }
@@ -159,54 +165,46 @@ def main():
     # Execution pipeline
     start_time = time.time()
 
-    # 1. Training (or load existing weights)
-    training_results = run_training(config)
-    weights_path = training_results["weights"]
+    # Check for training hyperparameter sweeps (must come before training)
+    hyperparameter_sweep = config.get("hyperparameter_sweep", None)
 
-    # 2. Check for parameter sweeps
-    inference_config = config.get("inference", {})
-    conf_sweep = inference_config.get("conf_sweep", None)
-    iou_sweep = inference_config.get("iou_sweep", None)
+    if hyperparameter_sweep:
+        # Training hyperparameter sweep - train multiple models with different hyperparameters
+        print("\n[INFO] Running hyperparameter sweep:")
+        for hp_name in hyperparameter_sweep:
+            print(f"  {hp_name}: {hyperparameter_sweep[hp_name]}")
 
-    if conf_sweep or iou_sweep:
-        # Run sweep experiments
-        print("\n[INFO] Running parameter sweep:")
-        if conf_sweep:
-            print(f"  conf_sweep: {conf_sweep}")
-        if iou_sweep:
-            print(f"  iou_sweep: {iou_sweep}")
+        # Generate sweep configurations
+        import copy
 
-        # Generate sweep configs
         sweep_configs = []
-        if conf_sweep and iou_sweep:
-            # Both sweeps - run cartesian product
-            for conf_val in conf_sweep:
-                for iou_val in iou_sweep:
-                    sweep_configs.append({"conf": conf_val, "iou": iou_val})
-        elif conf_sweep:
-            # Only conf sweep
-            for conf_val in conf_sweep:
-                sweep_configs.append(
-                    {"conf": conf_val, "iou": inference_config.get("iou", 0.45)}
-                )
-        elif iou_sweep:
-            # Only iou sweep
-            for iou_val in iou_sweep:
-                sweep_configs.append(
-                    {"conf": inference_config.get("conf", 0.25), "iou": iou_val}
-                )
+        base_name = config.get("name", "model")
 
-        # Run each sweep configuration
-        for idx, sweep_params in enumerate(sweep_configs, 1):
+        # For each hyperparameter to sweep
+        for hp_name, hp_values in hyperparameter_sweep.items():
+            for hp_val in hp_values:
+                # Deep copy config
+                sweep_config = copy.deepcopy(config)
+                sweep_config["skip_training"] = False  # Must train
+
+                # Update the specific hyperparameter
+                if "hyperparameters" not in sweep_config:
+                    sweep_config["hyperparameters"] = {}
+                sweep_config["hyperparameters"][hp_name] = hp_val
+
+                # Update experiment name
+                sweep_config["name"] = f"{base_name}_{hp_name}_{hp_val}"
+                sweep_configs.append((sweep_config, hp_name, hp_val))
+
+        # Run each hyperparameter configuration
+        for idx, (sweep_config, hp_name, hp_val) in enumerate(sweep_configs, 1):
             print(
-                f"\n[INFO] Sweep {idx}/{len(sweep_configs)}: conf={sweep_params['conf']}, iou={sweep_params['iou']}"
+                f"\n[INFO] Sweep {idx}/{len(sweep_configs)}: {hp_name}={hp_val}"
             )
 
-            # Create modified config for this sweep
-            sweep_config = config.copy()
-            sweep_config["inference"] = inference_config.copy()
-            sweep_config["inference"]["conf"] = sweep_params["conf"]
-            sweep_config["inference"]["iou"] = sweep_params["iou"]
+            # 1. Training
+            training_results = run_training(sweep_config)
+            weights_path = training_results["weights"]
 
             # 2. Inference
             predictions = run_inference(sweep_config, weights_path)
@@ -218,15 +216,75 @@ def main():
             save_results(metrics, sweep_config)
 
     else:
-        # Standard single-config experiment
-        # 2. Inference
-        predictions = run_inference(config, weights_path)
+        # Standard execution path (no hyperparameter sweep)
+        # 1. Training (or load existing weights)
+        training_results = run_training(config)
+        weights_path = training_results["weights"]
 
-        # 3. Evaluation
-        metrics = run_evaluation(predictions, config)
+        # 2. Check for inference parameter sweeps
+        inference_config = config.get("inference", {})
+        conf_sweep = inference_config.get("conf_sweep", None)
+        iou_sweep = inference_config.get("iou_sweep", None)
 
-        # 4. Save results
-        save_results(metrics, config)
+        if conf_sweep or iou_sweep:
+            # Run sweep experiments
+            print("\n[INFO] Running parameter sweep:")
+            if conf_sweep:
+                print(f"  conf_sweep: {conf_sweep}")
+            if iou_sweep:
+                print(f"  iou_sweep: {iou_sweep}")
+
+            # Generate sweep configs
+            sweep_configs = []
+            if conf_sweep and iou_sweep:
+                # Both sweeps - run cartesian product
+                for conf_val in conf_sweep:
+                    for iou_val in iou_sweep:
+                        sweep_configs.append({"conf": conf_val, "iou": iou_val})
+            elif conf_sweep:
+                # Only conf sweep
+                for conf_val in conf_sweep:
+                    sweep_configs.append(
+                        {"conf": conf_val, "iou": inference_config.get("iou", 0.45)}
+                    )
+            elif iou_sweep:
+                # Only iou sweep
+                for iou_val in iou_sweep:
+                    sweep_configs.append(
+                        {"conf": inference_config.get("conf", 0.25), "iou": iou_val}
+                    )
+
+            # Run each sweep configuration
+            for idx, sweep_params in enumerate(sweep_configs, 1):
+                print(
+                    f"\n[INFO] Sweep {idx}/{len(sweep_configs)}: conf={sweep_params['conf']}, iou={sweep_params['iou']}"
+                )
+
+                # Create modified config for this sweep
+                sweep_config = config.copy()
+                sweep_config["inference"] = inference_config.copy()
+                sweep_config["inference"]["conf"] = sweep_params["conf"]
+                sweep_config["inference"]["iou"] = sweep_params["iou"]
+
+                # 2. Inference
+                predictions = run_inference(sweep_config, weights_path)
+
+                # 3. Evaluation
+                metrics = run_evaluation(predictions, sweep_config)
+
+                # 4. Save results
+                save_results(metrics, sweep_config)
+
+        else:
+            # Standard single-config experiment
+            # 2. Inference
+            predictions = run_inference(config, weights_path)
+
+            # 3. Evaluation
+            metrics = run_evaluation(predictions, config)
+
+            # 4. Save results
+            save_results(metrics, config)
 
     elapsed = time.time() - start_time
     print(f"\n[INFO] Total time: {elapsed:.1f}s")
