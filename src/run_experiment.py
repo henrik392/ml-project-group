@@ -131,7 +131,7 @@ def save_results(
 
     print(f"[SUCCESS] Results saved to {output_path}")
     print(
-        f"  F2: {result['f2']:.4f}, mAP50: {result['map50']:.4f}, Recall: {result['recall']:.4f}"
+        f"  F2: {result['f2']:.4f}, Recall: {result['recall']:.4f}, Precision: {result['precision']:.4f}"
     )
 
 
