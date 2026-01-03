@@ -4,6 +4,10 @@
 experiment_id: exp09_f2_optimized
 description: "YOLOv11n retrained with F2-optimized hyperparameters (recall >> precision)"
 
+# ⚠️ NOTE: This config INTENTIONALLY specifies explicit hyperparameters to test
+# F2-focused training (cls=2.0, box=5.0). This is different from the baseline
+# which should NOT specify hyperparameters to use Ultralytics defaults.
+
 # Model configuration
 model: yolo11n  # YOLOv11 nano
 weights: null    # Train from pretrained COCO weights

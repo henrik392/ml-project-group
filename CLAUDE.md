@@ -48,6 +48,57 @@ uv run ruff format src/
 
 ---
 
+## Hyperparameter Configuration (CRITICAL LESSON LEARNED)
+
+### ⚠️ DO NOT explicitly specify "default" hyperparameters
+
+**Problem**: Explicitly specifying hyperparameters or augmentation in config files (even with "default" values) is **NOT the same** as using Ultralytics defaults.
+
+**Evidence**:
+- exp05 (NO explicit hyperparameters): F2 = **0.303**
+- exp06 (WITH explicit "default" hyperparameters): F2 = **0.285** (-6%)
+
+**Root Cause**:
+When you explicitly specify hyperparameters/augmentation, Ultralytics disables automatic features:
+- `auto_augment: randaugment` (disabled when augmentation specified)
+- `erasing: 0.4` (random erasing augmentation)
+- `close_mosaic: 10` (disables mosaic in last 10 epochs)
+- Other automatic optimizations
+
+**Correct Approach**:
+```yaml
+# ✅ GOOD - Let Ultralytics use its defaults
+model: yolo11n
+epochs: 6
+imgsz: 1280
+batch: 4
+device: mps
+seed: 42
+# NO hyperparameters section
+# NO augmentation section
+
+# Only override when sweeping specific parameters:
+hyperparameter_sweep:
+  cls: [0.5, 1.0, 2.0, 3.0]  # Only cls is modified, rest use defaults
+```
+
+```yaml
+# ❌ BAD - Explicitly specifying "defaults" breaks things
+hyperparameters:
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+  # ... even if these match Ultralytics defaults, specifying them disables auto features!
+
+augmentation:
+  hsv_h: 0.015
+  # ... disables auto_augment and erasing!
+```
+
+**Rule**: Only specify parameters you are **intentionally changing** from defaults. Let Ultralytics handle the rest.
+
+---
+
 ## Scientific Writing Standard (MANDATORY)
 
 ### Always separate **Facts** from **Hypotheses**

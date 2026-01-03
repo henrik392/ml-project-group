@@ -121,6 +121,17 @@ Each experiment automatically runs:
 3. **Evaluation** (F2, mAP50, recall, precision, latency)
 4. **Results logging** to `outputs/metrics/results.csv`
 
+### ⚠️ Important: Hyperparameter Configuration
+
+**DO NOT explicitly specify hyperparameters with "default" values** - this disables Ultralytics automatic features and degrades performance.
+
+**Evidence**: Specifying explicit hyperparameters (even with default values) reduced F2 from 0.303 → 0.285 (-6%) because it disabled:
+- `auto_augment: randaugment`
+- `erasing: 0.4` (random erasing)
+- `close_mosaic: 10` (mosaic scheduling)
+
+**Correct approach**: Only specify parameters you are intentionally changing. See `CLAUDE.md` for detailed examples.
+
 ### Available Experiments
 
 - **exp01_yolov5_baseline.yaml** - Historical baseline (2022 SOTA)

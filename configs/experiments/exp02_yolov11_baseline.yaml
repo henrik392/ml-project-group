@@ -57,3 +57,11 @@ notes: |
   Modern baseline using YOLOv11n with default hyperparameters.
   Ablation study validated that defaults are optimal.
   Focus: Establish strong baseline before scaling resolution/model.
+
+  ⚠️ KNOWN ISSUE: This model was trained with explicitly specified
+  hyperparameters/augmentation, which DISABLED Ultralytics automatic features
+  (auto_augment, erasing, etc.). This resulted in poor performance:
+  - exp02 (640px, WITH explicit params): F2 = 0.058
+  - exp05 (1280px, NO explicit params): F2 = 0.303
+
+  DO NOT use this as a true baseline. Use exp05 as the reference baseline.
