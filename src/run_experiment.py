@@ -80,7 +80,8 @@ def save_results(
 
     Follows standardized schema:
     experiment_id, fold_id, eval_video_id, model, inference, tracking,
-    conf, iou, imgsz, f2, map50, recall, precision, ms_per_frame, seed, timestamp
+    conf, iou, imgsz, f2, recall, precision, ms_per_frame,
+    hp_cls, hp_box, hp_dfl, hp_lr0, hp_lrf, seed, timestamp
     """
     # Extract values with defaults
     inference_config = config.get("inference", {})
@@ -102,7 +103,7 @@ def save_results(
         "iou": inference_config.get("iou", 0.45),
         "imgsz": config.get("imgsz", 640),
         "f2": metrics.get("f2", 0.0),
-        "map50": metrics.get("map50", 0.0),
+        # map50 removed - was placeholder copying f2
         "recall": metrics.get("recall", 0.0),
         "precision": metrics.get("precision", 0.0),
         "ms_per_frame": metrics.get("ms_per_frame", 0.0),

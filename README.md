@@ -274,8 +274,8 @@ kaggle competitions submit -c tensorflow-great-barrier-reef -f submission.csv -m
 ## Results CSV Schema
 
 ```csv
-experiment_id,fold_id,eval_video_id,model,inference,tracking,conf,iou,imgsz,f2,map50,recall,precision,ms_per_frame,seed,timestamp
-exp01_yolov5,0,video_0,yolov5n,standard,none,0.25,0.45,640,0.42,0.35,0.55,0.38,22.2,42,2025-12-27T10:00:00
+experiment_id,fold_id,eval_video_id,model,inference,tracking,conf,iou,imgsz,f2,recall,precision,ms_per_frame,hp_cls,hp_box,hp_dfl,hp_lr0,hp_lrf,seed,timestamp
+exp01_yolov5,0,video_0,yolov5n,standard,none,0.25,0.45,640,0.42,0.55,0.38,22.2,0.5,7.5,1.5,0.01,0.01,42,2025-12-27T10:00:00
 ```
 
 **Column definitions**:
