@@ -16,7 +16,7 @@ fold_id: 0
 # Training parameters
 epochs: 6  # Quick sweep to find optimal hyperparameters
 imgsz: 1280  # High resolution (optimal from exp05)
-batch: 8     # Doubled from exp05 (36GB RAM available, only uses ~9GB)
+batch: -1    # Auto mode: 60% GPU memory utilization (36GB available)
 device: mps
 seed: 42
 name: yolo11n_hp_sweep_fold0
