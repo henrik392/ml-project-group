@@ -26,9 +26,10 @@ name: yolo11n_hp_sweep_fold0
 # Hyperparameter sweep configuration
 # Only sweep the specific parameters we want to test
 # All other hyperparameters will use Ultralytics defaults
+# cls=0.5 excluded - already tested with F2=0.321 (best so far)
 hyperparameter_sweep:
-  cls: [0.5, 1.0, 2.0, 3.0]  # Classification loss weight (default 0.5)
-  box: [7.5, 5.0, 3.0]        # Bounding box loss weight (default 7.5)
+  cls: [1.0, 2.0, 3.0]  # Classification loss weight (testing higher than default 0.5)
+  box: [7.5, 5.0, 3.0]   # Bounding box loss weight (default 7.5, testing lower)
 
 # Inference configuration (use defaults for now)
 inference:
@@ -53,25 +54,24 @@ notes: |
   ─────────────────────────────────────────────────────────────────
   - NO explicit hyperparameters section (uses Ultralytics defaults)
   - NO augmentation override (uses auto_augment, erasing, etc.)
-  - NO patience override (uses default 100 = essentially no early stopping)
+  - batch=-1 (auto mode, 60% GPU utilization)
   - Only modifies cls or box for each sweep run
 
-  Strategy:
-  ─────────
-  1. Sweep cls: [0.5, 1.0, 2.0, 3.0] (4 runs)
-     - cls=0.5 is baseline (should reproduce exp05 F2=0.303)
+  Previous Results (batch=4):
+  ──────────────────────────
+  cls=0.5, box=7.5: F2=0.321 (6 epochs) ← BEST, excluded from sweep
+
+  Current Sweep Strategy:
+  ──────────────────────────
+  1. Sweep cls: [1.0, 2.0, 3.0] (3 runs)
      - Higher cls = more focus on classification (detection) vs localization
      - Expected to improve recall → improve F2
 
   2. Sweep box: [7.5, 5.0, 3.0] (3 runs)
-     - box=7.5 is baseline
      - Lower box = less emphasis on perfect box localization
      - May allow model to be more generous with detections
 
-  Current Baseline (exp05, 6 epochs, Ultralytics defaults):
-  ──────────────────────────────────────────────────────────
-  F2: 0.303, Recall: 29.7%, Precision: 36.2%
-
   Time Estimate:
   ──────────────
-  7 runs × 3.5 hrs/run = ~24 hours
+  6 runs × 3.5 hrs/run = ~21 hours
+  (with batch=-1 auto mode, may be faster)
