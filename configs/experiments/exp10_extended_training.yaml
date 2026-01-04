@@ -1,0 +1,69 @@
+# Experiment 10: Extended Training (yolo11n to convergence)
+# Purpose: Train yolo11n for 30 epochs at 1280px with Ultralytics defaults
+# Validates whether model needs more training or if capacity is the bottleneck
+
+experiment_id: exp10_extended_training
+description: "Train yolo11n to convergence at 1280px with Ultralytics defaults"
+
+# Model configuration
+model: yolo11n
+weights: null  # Train from pretrained COCO weights
+skip_training: false
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters - ONLY specify what we intentionally change
+epochs: 30       # Train to convergence
+imgsz: 1280      # Optimal resolution from exp05
+batch: -1        # Auto mode: 60% GPU memory utilization
+device: mps
+seed: 42
+name: yolo11n_1280_30ep_fold0
+
+# Early stopping to avoid wasting time if it plateaus
+patience: 10     # Stop if no improvement for 10 epochs
+
+# NOTE: NO hyperparameters, NO augmentation, NO optimizer settings
+# Let Ultralytics use ALL defaults (auto_augment, erasing, close_mosaic, etc.)
+
+# Inference configuration
+inference:
+  mode: standard
+  conf: 0.25
+  iou: 0.45
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  EXTENDED TRAINING EXPERIMENT
+
+  Goal: Determine if yolo11n needs more training or if model capacity is the bottleneck.
+
+  Previous Results:
+  ────────────────
+  - exp05 (1280px, 1 epoch actual):  F2 = 0.303
+  - exp06 (1280px, 6 epochs):        F2 = 0.321 (+6%)
+
+  Training Strategy:
+  ──────────────────
+  - 30 epochs with patience=10 (early stopping)
+  - Ultralytics defaults (NO explicit hyperparameters/augmentation)
+  - batch=-1 (auto mode, ~16-24 samples based on GPU memory)
+
+  Expected Outcomes:
+  ──────────────────
+  1. F2 reaches 0.38-0.42:     yolo11n sufficient → DONE
+  2. F2 plateaus at ~0.32-0.35: Try yolo11s (larger model)
+
+  Time Estimate:
+  ──────────────
+  30 epochs × ~25 min/epoch = ~12.5 hours
+  (but early stopping may finish sooner)

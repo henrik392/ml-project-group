@@ -60,9 +60,9 @@ overall_start=$(date +%s)
 #     "configs/experiments/test/test_exp05.yaml"
 # )
 
-# HYPERPARAMETER SWEEP MODE - Find optimal hyperparameters (6 epochs each)
+# EXTENDED TRAINING - Train yolo11n to convergence (30 epochs)
 EXPERIMENTS=(
-    "configs/experiments/exp06_hp_sweep.yaml"
+    "configs/experiments/exp10_extended_training.yaml"
 )
 
 # Add more experiments here as needed:
