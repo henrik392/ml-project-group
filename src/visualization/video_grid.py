@@ -51,9 +51,9 @@ METHODS = [
         color=(255, 0, 0),  # Blue
     ),
     MethodConfig(
-        name="SAHI+ByteTrack",
-        experiment_id="exp08_sahi_bytetrack",
-        config_path="configs/experiments/exp08_sahi_bytetrack.yaml",
+        name="ByteTrack",
+        experiment_id="exp07_bytetrack",
+        config_path="configs/experiments/exp07_bytetrack.yaml",
         color=(255, 0, 255),  # Magenta
     ),
 ]

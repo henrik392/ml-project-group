@@ -4,9 +4,9 @@
 experiment_id: exp07_bytetrack
 description: "ByteTrack temporal context for video F2 enhancement"
 
-# Model configuration (use trained baseline)
+# Model configuration (use best checkpoint)
 model: yolo11n
-weights: runs/train/yolo11n_baseline_fold0/weights/best.pt  # From exp02
+weights: runs/train/yolo11n_hp_sweep_fold0_cls_0.5/weights/best.pt  # F2=0.321 baseline
 
 # Dataset
 data: configs/dataset_fold_0.yaml
@@ -24,14 +24,16 @@ inference:
 # Tracking
 tracking:
   enabled: true
-  tracker: bytetrack
+  tracker: bytetrack  # Uses configs/trackers/bytetrack_custom.yaml
 
-  # ByteTrack parameters
-  track_high_thresh: 0.5
-  track_low_thresh: 0.1
-  new_track_thresh: 0.6
-  track_buffer: 30
-  match_thresh: 0.8
+imgsz: 1280
+device: mps
+seed: 42
+
+# Note: ByteTrack parameters are now in configs/trackers/bytetrack_custom.yaml
+# Custom parameters:
+#   track_high_thresh: 0.5 (default: 0.25)
+#   new_track_thresh: 0.6 (default: 0.25)
 
 # Evaluation
 eval_video_id: video_0
@@ -39,7 +41,13 @@ eval_video_id: video_0
 # Notes
 notes: |
   ByteTrack via model.track() for temporal recall enhancement.
-  NOT for ID tracking - for boosting confidence across frames.
-  Hypothesis: Detections in nearby frames boost F2 score.
+
+  Base model: cls=0.5, 6 epochs, 1280px (F2=0.321)
+
+  ByteTrack benefits:
+  - Temporal consistency across frames
+  - Re-detection of missed objects
+  - Confidence boosting from tracking
+
   Expected: +5-10% F2 improvement with minimal cost.
   VERY HIGH ROI technique from winning solutions.

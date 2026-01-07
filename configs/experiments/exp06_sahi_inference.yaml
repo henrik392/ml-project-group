@@ -1,0 +1,55 @@
+# Experiment 6: SAHI Tiled Inference
+# Purpose: Test SAHI (Slicing Aided Hyper Inference) for small object detection
+
+experiment_id: exp06_sahi
+description: "SAHI tiled inference for small starfish detection"
+
+# Model configuration (use best checkpoint)
+model: yolo11n
+weights: runs/train/yolo11n_hp_sweep_fold0_cls_0.5/weights/best.pt  # F2=0.321 baseline
+skip_training: true
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters (not used)
+imgsz: 1280
+device: mps
+seed: 42
+
+# Inference configuration
+inference:
+  mode: sahi
+  conf: 0.25
+  iou: 0.45
+
+  # SAHI parameters
+  slice_height: 640
+  slice_width: 640
+  overlap_height_ratio: 0.2
+  overlap_width_ratio: 0.2
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  SAHI TILED INFERENCE
+
+  Base model: cls=0.5, 6 epochs, 1280px (F2=0.321)
+
+  SAHI benefits:
+  - Better small object detection via tiling
+  - Processes 1280px images as 640px tiles
+  - Overlap stitching reduces edge artifacts
+
+  Trade-offs:
+  - Higher accuracy for small objects
+  - ~4-8× slower inference (60-100ms vs 50ms per frame)
+
+  Expected: +2-5% F2 improvement for small starfish

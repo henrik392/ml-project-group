@@ -141,7 +141,8 @@ Each experiment automatically runs:
 - **exp05_resolution_scaling.yaml** - Resolution comparison (640 vs 1280)
 - **exp06_sahi_inference.yaml** - SAHI tiled inference
 - **exp07_bytetrack.yaml** - ByteTrack temporal tracking
-- **exp08_sahi_bytetrack.yaml** - Combined SAHI + ByteTrack
+
+Note: SAHI and ByteTrack are mutually exclusive modes.
 
 ### Running Multiple Experiments Overnight
 

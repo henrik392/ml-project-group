@@ -1,0 +1,44 @@
+# Best Model Evaluation
+# Purpose: Evaluate the best checkpoint from hyperparameter sweep (cls=0.5, 6 epochs)
+
+experiment_id: exp_best_model_eval
+description: "Best checkpoint baseline evaluation (F2=0.321)"
+
+# Model configuration
+model: yolo11n
+skip_training: true
+weights: runs/train/yolo11n_hp_sweep_fold0_cls_0.5/weights/best.pt
+
+# Dataset
+data: configs/dataset_fold_0.yaml
+fold_id: 0
+
+# Training parameters (not used)
+imgsz: 1280
+device: mps
+seed: 42
+
+# Inference configuration
+inference:
+  mode: standard
+  conf: 0.25
+  iou: 0.45
+
+# Tracking
+tracking:
+  enabled: false
+
+# Evaluation
+eval_video_id: video_0
+
+# Notes
+notes: |
+  BEST MODEL EVALUATION
+
+  This is the checkpoint from hyperparameter sweep cls=0.5 run:
+  - 6 epochs training
+  - batch=4 (stable)
+  - Ultralytics defaults
+  - Validation mAP50: 0.428 (epoch 6)
+
+  This should give F2 ≈ 0.32-0.35

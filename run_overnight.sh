@@ -60,17 +60,16 @@ overall_start=$(date +%s)
 #     "configs/experiments/test/test_exp05.yaml"
 # )
 
-# EXTENDED TRAINING - Train yolo11n to convergence (30 epochs)
+# INFERENCE EXPERIMENTS - Using best checkpoint (F2=0.321 baseline)
+# NOTE: SAHI uses lazy frame loading to avoid memory issues
 EXPERIMENTS=(
-    "configs/experiments/exp10_extended_training.yaml"
+    "configs/experiments/exp06_sahi_inference.yaml"
+    "configs/experiments/exp07_bytetrack.yaml"
 )
 
 # Add more experiments here as needed:
 # "configs/experiments/exp03_conf_sweep.yaml"
 # "configs/experiments/exp04_iou_sweep.yaml"
-# "configs/experiments/exp06_sahi_inference.yaml"
-# "configs/experiments/exp07_bytetrack.yaml"
-# "configs/experiments/exp08_sahi_bytetrack.yaml"
 
 # Run all experiments
 for experiment in "${EXPERIMENTS[@]}"; do

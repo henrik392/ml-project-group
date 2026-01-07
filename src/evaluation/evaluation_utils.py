@@ -33,17 +33,10 @@ def convert_detections_to_boxes(
         image_id = f"frame_{frame_id}"
         boxes = []
 
-        # Extract detection object
-        if has_tracking:
-            # Tracking dict: {'frame_idx', 'detections', 'tracks'}
-            det_result = result["detections"]
-        else:
-            det_result = result
-
         # Check if SAHI or YOLO result
-        if hasattr(det_result, "object_prediction_list"):
+        if hasattr(result, "object_prediction_list"):
             # SAHI result
-            for obj_pred in det_result.object_prediction_list:
+            for obj_pred in result.object_prediction_list:
                 bbox = obj_pred.bbox
                 boxes.append(
                     {
@@ -55,9 +48,9 @@ def convert_detections_to_boxes(
                     }
                 )
         else:
-            # YOLO result
-            if det_result.boxes is not None and len(det_result.boxes) > 0:
-                for box in det_result.boxes:
+            # YOLO result (includes tracking results from model.track())
+            if result.boxes is not None and len(result.boxes) > 0:
+                for box in result.boxes:
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                     conf = float(box.conf[0])
                     boxes.append(
